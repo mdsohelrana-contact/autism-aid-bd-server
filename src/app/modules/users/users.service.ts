@@ -6,10 +6,11 @@ import {
   PrismaQueryBuilder,
   QueryParams,
 } from "../../utils/PrismaQueryBuilder";
+import { hashPassword } from "../../utils/hashPassword";
 
 // Create a user
-const createUser = async (data: User) => {
-  const { email, phone } = data;
+const createUser = async (data: User & { password?: string }) => {
+  const { email, phone, password } = data;
 
   const existingUser = await prisma.user.findFirst({
     where: {
@@ -26,8 +27,14 @@ const createUser = async (data: User) => {
     );
   }
 
+  if (password) {
+    data.password = await hashPassword(password);
+  }
+
   const result = await prisma.user.create({ data });
-  return result;
+  const { password: _, ...safeResult } = result;
+  return safeResult;
+  
 };
 
 // Get all user
@@ -45,11 +52,14 @@ const getAllUsers = async (query: QueryParams) => {
   const users = await prisma.user.findMany(prismaQuery);
   const total = await prisma.user.count({ where: prismaQuery.where });
 
-  // Cursor-based meta info
-  // const nextCursor = products.length ? products[products.length - 1].id : null;
+  if (users.length === 0) {
+    throw new AppError(StatusCodes.NOT_FOUND, "No users found");
+  }
+  
+   const safeUsers = users.map(({ password, ...rest }) => rest);
 
   const result = {
-    data: users,
+    data: safeUsers,
     meta: {
       page: query.page || 1,
       limit: query.limit || 10,

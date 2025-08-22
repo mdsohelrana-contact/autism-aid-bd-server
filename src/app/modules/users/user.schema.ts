@@ -12,7 +12,7 @@ export const createUserSchema = z.object({
       .min(10, { message: "Phone number must be at least 10 digits" })
       .max(15, { message: "Phone number must be at most 15 digits" }),
     role: roles.optional(),
-    passwordHash: z
+    password: z
       .string({ error: "Password is required" })
       .min(6, { message: "Password must be at least 6 characters" }),
   }),
@@ -31,7 +31,7 @@ export const updateUserSchema = z.object({
       .max(15, { message: "Phone number must be at most 15 digits" })
       .optional(),
     role: roles.optional(),
-    passwordHash: z
+    password: z
       .string()
       .min(6, { message: "Password must be at least 6 characters" })
       .optional(),

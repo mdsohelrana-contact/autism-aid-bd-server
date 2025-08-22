@@ -66,18 +66,18 @@ enum StockEventType {
 
 // CORE USER MODEL
 model User {
-  id           String   @id @default(cuid())
-  phone        String   @unique
-  email        String?  @unique
-  name         String
-  role         Role     @default(CUSTOMER)
-  passwordHash String
+  id       String  @id @default(cuid())
+  phone    String  @unique
+  email    String? @unique
+  name     String
+  role     Role    @default(CUSTOMER)
+  password String
 
-  isBanned     Boolean  @default(false)
-  isDeleted    Boolean  @default(false)
+  isBanned  Boolean @default(false)
+  isDeleted Boolean @default(false)
 
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   addresses Address[]
   orders    Order[]
@@ -98,7 +98,7 @@ model Address {
   user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
   Order  Order[]
 
-  label      String   // e.g., "Home", "Office"
+  label      String // e.g., "Home", "Office"
   name       String
   phone      String
   line1      String
