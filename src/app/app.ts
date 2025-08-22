@@ -4,11 +4,16 @@ import cors from "cors";
 import globalErrorHandler from "./middlewares/globalErrorHandler";
 import notFoundHandler from "./middlewares/notFoundHandler";
 import routers from "./routes";
+import helmet from "helmet";
+import morgan from "morgan";
 
 const app: Application = express();
 
+app.use(helmet());
 app.use(cors());
 app.use(express.json());
+app.use(morgan('tiny'));
+
 
 // Routes
 app.use("/api/v1", routers);
