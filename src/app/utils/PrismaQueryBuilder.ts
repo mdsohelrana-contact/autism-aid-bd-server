@@ -1,0 +1,133 @@
+export interface QueryParams {
+  search?: string;
+  filter?: Record<string, any>;
+  sortBy?: string;
+  sortOrder?: "asc" | "desc";
+  page?: number; // page-based
+  limit?: number;
+  cursor?: string; // cursor-based (usually unique id)
+}
+
+// Prisma QueryBuilder
+export class PrismaQueryBuilder<T> {
+  private where: Record<string, any> = {};
+  private orderBy: Record<string, "asc" | "desc"> | undefined;
+  private take: number | undefined;
+  private skip: number | undefined;
+  private cursorObj: Record<string, any> | undefined;
+  private query: QueryParams;
+
+  constructor(query: QueryParams) {
+    this.query = query;
+  }
+
+  // Search
+  search(searchingFields: (keyof T)[]) {
+    const search = this.query.search;
+    if (search && searchingFields.length) {
+      this.where.OR = searchingFields.map((field) => ({
+        [field]: { contains: search, mode: "insensitive" },
+      }));
+    }
+    return this;
+  }
+
+  // Filter
+  filter() {
+    const filter = this.query.filter || {};
+
+    Object.keys(filter).forEach((key) => {
+      let value: any = filter[key];
+
+      // ---------------- Convert string to boolean or number ----------------
+      if (value === "true") value = true;
+      if (value === "false") value = false;
+      if (!isNaN(value) && value !== "") value = Number(value);
+
+      // ---------------- Handle operators if value is object ----------------
+      if (
+        typeof value === "object" &&
+        value !== null &&
+        !Array.isArray(value)
+      ) {
+        this.where[key] = {};
+        Object.keys(value).forEach((op) => {
+          let opValue = value[op];
+
+          // Convert string to boolean/number for operator values
+          if (opValue === "true") opValue = true;
+          if (opValue === "false") opValue = false;
+          if (!isNaN(opValue) && opValue !== "") opValue = Number(opValue);
+
+          switch (op) {
+            case "gt":
+            case "gte":
+            case "lt":
+            case "lte":
+            case "equals":
+            case "not":
+            case "in":
+            case "notIn":
+              this.where[key][op] = opValue;
+              break;
+            case "contains":
+              this.where[key].contains = opValue;
+              this.where[key].mode = "insensitive";
+              break;
+            default:
+              throw new Error(`Unsupported filter operator: ${op}`);
+          }
+        });
+      } else {
+        // direct match
+        this.where[key] = value;
+      }
+    });
+
+    return this;
+  }
+
+  // Sort
+  sort() {
+    if (this.query.sortBy) {
+      this.orderBy = {
+        [this.query.sortBy]: this.query.sortOrder === "desc" ? "desc" : "asc",
+      };
+    }
+    return this;
+  }
+
+  // Paginate
+  paginate() {
+    const limit = this.query.limit ? Number(this.query.limit) : 10;
+    this.take = limit;
+
+    if (this.query.cursor) {
+      // Cursor-based pagination
+      this.cursorObj = { id: this.query.cursor };
+      this.skip = 1; // skip cursor itself
+    } else {
+      // Page-based pagination
+      const page = this.query.page ? Number(this.query.page) : 1;
+      this.skip = (page - 1) * limit;
+    }
+
+    return this;
+  }
+
+  // Build the final query
+  build() {
+    const finalQuery: any = {
+      where: this.where,
+      orderBy: this.orderBy,
+      take: this.take,
+      skip: this.skip,
+    };
+
+    if (this.cursorObj) {
+      finalQuery.cursor = this.cursorObj;
+    }
+
+    return finalQuery;
+  }
+}
