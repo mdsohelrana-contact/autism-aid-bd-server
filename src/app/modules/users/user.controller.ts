@@ -48,8 +48,8 @@ const getAllUsers = catchAsync(async (req: Request, res: Response) => {
     statusCode: StatusCodes.OK,
     success: true,
     message: "Users fetched successfully",
-    meta: result.meta, // use meta from service
-    data: result.data, // only the users array
+    meta: result.meta,
+    data: result.data,
   });
 });
 

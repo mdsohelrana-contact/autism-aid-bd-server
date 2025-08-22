@@ -6,13 +6,18 @@ import notFoundHandler from "./middlewares/notFoundHandler";
 import routers from "./routes";
 import helmet from "helmet";
 import morgan from "morgan";
+import config from "./config";
 
 const app: Application = express();
 
 app.use(helmet());
 app.use(cors());
 app.use(express.json());
-app.use(morgan('tiny'));
+
+if (config.nodeEnv !== 'production') {
+  app.use(morgan('dev'));
+}
+
 
 
 // Routes
