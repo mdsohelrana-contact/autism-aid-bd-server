@@ -8,11 +8,14 @@ import helmet from "helmet";
 import morgan from "morgan";
 import config from "./config";
 
+
 const app: Application = express();
 
 app.use(helmet());
 app.use(cors());
 app.use(express.json());
+
+
 
 if (config.nodeEnv !== 'production') {
   app.use(morgan('dev'));

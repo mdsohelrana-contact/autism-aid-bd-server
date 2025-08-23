@@ -39,12 +39,17 @@ export class PrismaQueryBuilder<T> {
     Object.keys(filter).forEach((key) => {
       let value: any = filter[key];
 
-      // ---------------- Convert string to boolean or number ----------------
-      if (value === "true") value = true;
-      if (value === "false") value = false;
-      if (!isNaN(value) && value !== "") value = Number(value);
+      // Convert string/number to boolean
+      if (value === "true" || value === true || value === 1 || value === "1")
+        value = true;
+      if (value === "false" || value === false || value === 0 || value === "0")
+        value = false;
 
-      // ---------------- Handle operators if value is object ----------------
+      // Convert number strings to numbers (exclude booleans)
+      if (!isNaN(value) && value !== "" && value !== true && value !== false)
+        value = Number(value);
+
+      // Handle operators if value is object
       if (
         typeof value === "object" &&
         value !== null &&
@@ -54,10 +59,28 @@ export class PrismaQueryBuilder<T> {
         Object.keys(value).forEach((op) => {
           let opValue = value[op];
 
-          // Convert string to boolean/number for operator values
-          if (opValue === "true") opValue = true;
-          if (opValue === "false") opValue = false;
-          if (!isNaN(opValue) && opValue !== "") opValue = Number(opValue);
+          // Convert string/number to boolean/number for operator values
+          if (
+            opValue === "true" ||
+            opValue === true ||
+            opValue === 1 ||
+            opValue === "1"
+          )
+            opValue = true;
+          if (
+            opValue === "false" ||
+            opValue === false ||
+            opValue === 0 ||
+            opValue === "0"
+          )
+            opValue = false;
+          if (
+            !isNaN(opValue) &&
+            opValue !== "" &&
+            opValue !== true &&
+            opValue !== false
+          )
+            opValue = Number(opValue);
 
           switch (op) {
             case "gt":

@@ -4,6 +4,7 @@ import responseHandler from "../../utils/responseHandler";
 import { UserService } from "./users.service";
 import { QueryParams } from "../../utils/PrismaQueryBuilder";
 import { Request, Response } from "express";
+import qs from "qs";
 
 // Helper to safely parse JSON
 const parseJSON = (value?: string) => {
@@ -30,15 +31,15 @@ const createUser = catchAsync(async (req, res) => {
 
 // Get all users
 const getAllUsers = catchAsync(async (req: Request, res: Response) => {
-  const { search, filter, sortBy, sortOrder, page, limit } = req.query;
+  const parsedQuery = qs.parse(req.query as any);
 
   const query: QueryParams = {
-    search: search as string | undefined,
-    filter: parseJSON(filter as string),
-    sortBy: sortBy as string | undefined,
-    sortOrder: sortOrder === "desc" ? "desc" : "asc",
-    page: page ? Number(page) : undefined,
-    limit: limit ? Number(limit) : undefined,
+    search: parsedQuery.search as string | undefined,
+    filter: parsedQuery.filter as Record<string, any> | undefined,
+    sortBy: parsedQuery.sortBy as string | undefined,
+    sortOrder: parsedQuery.sortOrder === "desc" ? "desc" : "asc",
+    page: parsedQuery.page ? Number(parsedQuery.page) : undefined,
+    limit: parsedQuery.limit ? Number(parsedQuery.limit) : undefined,
   };
 
   const result = await UserService.getAllUsers(query);
