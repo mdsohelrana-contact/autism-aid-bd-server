@@ -1,6 +1,7 @@
 // src/routes/index.ts
 import { Router } from "express";
 import { userRoutes } from "../modules/users/user.route";
+import { authRoutes } from "../modules/auth/auth.route";
 
 const routers = Router();
 
@@ -12,8 +13,7 @@ interface ModuleRoute {
 // Centralized route registry
 const moduleRoutes: ModuleRoute[] = [
   { path: "/users", route: userRoutes },
-  // { path: "/products", route: productRoutes },
-  // { path: "/orders", route: orderRoutes },
+  { path: "/", route: authRoutes },
 ];
 
 moduleRoutes.forEach(({ path, route }) => routers.use(path, route));

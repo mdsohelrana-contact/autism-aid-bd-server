@@ -3,23 +3,25 @@ import jwt, { JwtPayload } from "jsonwebtoken";
 import { StatusCodes } from "http-status-codes";
 import AppError from "../errors/AppError";
 import config from "../config";
-import { TUserRole } from "../modules/users/user.constant";
+import { Role } from "@prisma/client";
 
-const auth = (...userRoles: TUserRole[]) => {
+const auth = (...userRoles: Role[]) => {
   return async (req: Request, res: Response, next: NextFunction) => {
     try {
       const authHeader = req.headers.authorization;
-      const token = authHeader?.split(" ")[1];
+      const token = authHeader?.startsWith("Bearer ")
+        ? authHeader.split(" ")[1]
+        : authHeader;
 
       if (!token) {
         return next(new AppError(StatusCodes.UNAUTHORIZED, "Unauthorized"));
       }
 
       // Verify token asynchronously
-      const decoded = jwt.verify(token, config.jwt.secret) as JwtPayload;
+      const decoded = jwt.verify(token, config.jwt.accessSecret) as JwtPayload;
 
       // Check user role
-      const role = decoded.role as TUserRole;
+      const role = decoded.role as Role;
       if (userRoles.length && !userRoles.includes(role)) {
         return next(
           new AppError(StatusCodes.FORBIDDEN, "Forbidden: Access denied")
@@ -27,7 +29,10 @@ const auth = (...userRoles: TUserRole[]) => {
       }
 
       // Attach decoded user to request object
-      req.user = decoded;
+      req.user = {
+        id: decoded.userId,
+        role: decoded.role,
+      };
 
       next();
     } catch (error: any) {

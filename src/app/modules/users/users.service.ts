@@ -34,7 +34,6 @@ const createUser = async (data: User & { password?: string }) => {
   const result = await prisma.user.create({ data });
   const { password: _, ...safeResult } = result;
   return safeResult;
-  
 };
 
 // Get all user
@@ -55,8 +54,8 @@ const getAllUsers = async (query: QueryParams) => {
   if (users.length === 0) {
     throw new AppError(StatusCodes.NOT_FOUND, "No users found");
   }
-  
-   const safeUsers = users.map(({ password, ...rest }) => rest);
+
+  const safeUsers = users.map(({ password, ...rest }) => rest);
 
   const result = {
     data: safeUsers,
@@ -72,12 +71,23 @@ const getAllUsers = async (query: QueryParams) => {
 
 // Get a single user by
 const getSingleUser = async (id: string) => {
-  const result = await prisma.user.findUnique({
+  const user = await prisma.user.findUnique({
     where: {
       id,
     },
+    include: {
+      addresses: true,
+      carts: true,
+      orders: true,
+      reviews: true,
+    },
   });
-  return result;
+
+  if (!user) return null;
+
+  const { password, ...safeUser } = user;
+
+  return safeUser;
 };
 
 // Update a user BY ID
