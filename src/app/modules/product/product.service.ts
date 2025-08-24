@@ -155,17 +155,45 @@ const getProductById = async (id: string) => {
 
 // Update a product
 const updateProduct = async (id: string, data: Partial<ProductCreateInput>) => {
-  return prisma.product.update({
+  const existingProduct = await prisma.product.findUnique({ where: { id } });
+  if (!existingProduct) {
+    throw new AppError(StatusCodes.NOT_FOUND, "Product not found");
+  }
+
+  if (!data.sku && data.name) {
+    data.sku = generateSKU(data.name);
+  }
+
+  const updatedProduct = await prisma.product.update({
     where: { id },
     data,
   });
+
+  return updatedProduct;
 };
 
 // Delete a product
 const deleteProduct = async (id: string) => {
-  return prisma.product.delete({
+  const existingProduct = await prisma.product.findUnique({ where: { id } });
+  if (!existingProduct) {
+    throw new AppError(StatusCodes.NOT_FOUND, "Product not found");
+  }
+
+  const hasOrders = await prisma.orderItem.findFirst({
+    where: { productId: id },
+  });
+  if (hasOrders) {
+    throw new AppError(
+      StatusCodes.BAD_REQUEST,
+      "Cannot delete product with existing orders"
+    );
+  }
+
+  const deletedProduct = await prisma.product.delete({
     where: { id },
   });
+
+  return deletedProduct;
 };
 
 export const ProductService = {

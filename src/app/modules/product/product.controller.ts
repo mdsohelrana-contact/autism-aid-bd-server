@@ -70,7 +70,6 @@ const deleteProduct = catchAsync(async (req, res) => {
     statusCode: StatusCodes.OK,
     success: true,
     message: "Product deleted successfully",
-    data: result,
   });
 });
 
