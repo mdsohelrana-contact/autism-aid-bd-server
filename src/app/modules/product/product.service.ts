@@ -1,5 +1,5 @@
 import { Prisma, Product } from "@prisma/client";
-import { ensureUserExists } from "../../utils/ensureUserExists ";
+
 import { generateSKU } from "../../utils/generateSKU";
 import prisma from "../../utils/prisma";
 import { ProductCreateInput } from "./product.type";
@@ -9,6 +9,7 @@ import {
   PrismaQueryBuilder,
   QueryParams,
 } from "../../utils/builder/PrismaQueryBuilder";
+import { ensureUserExists } from "../../utils/user/ensureUserExists ";
 
 // Create a product
 const createProduct = async (userId: string, data: any) => {

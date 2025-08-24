@@ -1,10 +1,9 @@
 import { StatusCodes } from "http-status-codes";
 import AppError from "../../errors/AppError";
 import { comparePassword } from "../../utils/hashPassword";
-import prisma from "../../utils/prisma";
 import { signToken, verifyToken } from "../../utils/jwt";
 import config from "../../config";
-import { findUserByEmailOrPhone } from "../../utils/userCheck";
+import { findUserByEmailOrPhone } from "../../utils/user/userCheck";
 
 // Login a user
 const login = async (data: {
@@ -22,7 +21,7 @@ const login = async (data: {
   }
 
   // Check password
-  const isPasswordValid = await comparePassword(password, user.password);
+  const isPasswordValid = await comparePassword(password, user.password!);
   if (!isPasswordValid) {
     throw new AppError(StatusCodes.UNAUTHORIZED, "Invalid credentials");
   }

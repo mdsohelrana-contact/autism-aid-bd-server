@@ -2,11 +2,12 @@ import { Prisma, Address } from "@prisma/client";
 import { StatusCodes } from "http-status-codes";
 import prisma from "../../utils/prisma";
 import AppError from "../../errors/AppError";
-import { ensureUserExists } from "../../utils/ensureUserExists ";
+
 import {
   PrismaQueryBuilder,
   QueryParams,
 } from "../../utils/builder/PrismaQueryBuilder";
+import { ensureUserExists } from "../../utils/user/ensureUserExists ";
 
 // Create an address
 const createAddress = async (userId: string, data: Address) => {

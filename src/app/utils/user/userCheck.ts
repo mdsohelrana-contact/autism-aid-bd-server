@@ -1,7 +1,5 @@
 import { User } from "@prisma/client";
-import prisma from "./prisma";
-import AppError from "../errors/AppError";
-import { StatusCodes } from "http-status-codes";
+import prisma from "../prisma";
 
 interface FindUserParams {
   email?: string;
