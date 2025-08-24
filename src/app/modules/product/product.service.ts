@@ -90,7 +90,8 @@ const getAllProducts = async (query: QueryParams) => {
 
 // Get a single product
 const getProductById = async (id: string) => {
-  return prisma.product.findUnique({
+  // Fetch main product with relations
+  const product = await prisma.product.findUnique({
     where: { id },
     include: {
       translations: true,
@@ -99,6 +100,57 @@ const getProductById = async (id: string) => {
       reviews: true,
     },
   });
+
+  // Check if product exists
+  if (!product) {
+    throw new AppError(StatusCodes.NOT_FOUND, "Product not found");
+  }
+
+  // Build related product filters
+  const tagFilter =
+    product.tags.length > 0 ? { hasSome: product.tags } : undefined;
+
+  const categoryIds = product.categories.map((c) => c.categoryId);
+  const categoryFilter =
+    categoryIds.length > 0
+      ? { some: { categoryId: { in: categoryIds } } }
+      : undefined;
+
+  // Age range overlap filter
+  const ageMin = product.ageMin ?? 0;
+  const ageMax = product.ageMax ?? 100;
+  const ageFilter = {
+    OR: [
+      {
+        ageMin: { lte: ageMax },
+        ageMax: { gte: ageMin },
+      },
+    ],
+  };
+
+  // Fetch related products (tags OR categories OR age overlap)
+  const relatedProducts = await prisma.product.findMany({
+    where: {
+      id: { not: product.id }, // exclude current product
+      status: "ACTIVE",
+      OR: [
+        ...(tagFilter ? [{ tags: tagFilter }] : []),
+        ...(categoryFilter ? [{ categories: categoryFilter }] : []),
+        ageFilter,
+      ],
+    },
+    take: 5, // limit
+    include: {
+      translations: true,
+      media: true,
+      categories: true,
+    },
+  });
+
+  return {
+    product,
+    relatedProducts,
+  };
 };
 
 // Update a product
