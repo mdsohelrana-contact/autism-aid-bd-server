@@ -5,6 +5,7 @@ import { authRoutes } from "../modules/auth/auth.route";
 import { addressRoutes } from "../modules/address/address.routes";
 import { productRoutes } from "../modules/product/product.routes";
 import { productTranslationRoutes } from "../modules/productTranslation/productTranslation.routes";
+import { productMediaRoutes } from "../modules/productMedia/productMedia.routes";
 
 const routers = Router();
 
@@ -20,6 +21,7 @@ const moduleRoutes: ModuleRoute[] = [
   { path: "/address", route: addressRoutes },
   { path: "/products", route: productRoutes },
   { path: "/product-translations", route: productTranslationRoutes },
+  { path: "/product-media", route: productMediaRoutes },
 ];
 
 moduleRoutes.forEach(({ path, route }) => routers.use(path, route));

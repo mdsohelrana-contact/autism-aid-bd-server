@@ -17,6 +17,12 @@ export default {
     refreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN || "7d",
   },
 
+  cloudinary:{
+    cloudName: process.env.CLOUDINARY_CLOUD_NAME || "",
+    apiKey: process.env.CLOUDINARY_API_KEY || "",
+    apiSecret: process.env.CLOUDINARY_API_SECRET || "",
+  },
+
   corsOrigin: process.env.CORS_ORIGIN || "*",
   logLevel: process.env.LOG_LEVEL || "info",
 };
