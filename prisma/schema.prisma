@@ -81,6 +81,7 @@ model User {
   orders       Order[]
   reviews      Review[]
   Notification Notification[]
+  Product      Product[]
 
   @@map("users")
 }
@@ -109,10 +110,18 @@ model Address {
 
 //  PRODUCT 
 model Product {
-  id     String        @id @default(cuid())
-  sku    String        @unique
-  status ProductStatus @default(ACTIVE)
-  brand  String?
+  id  String @id @default(cuid())
+  sku String @unique
+
+  userId String
+
+  name        String
+  status      ProductStatus @default(ACTIVE)
+  brand       String?
+  description String
+  benefits    String
+  ageMin      Int?
+  ageMax      Int?
 
   basePrice     Decimal  @default(0) @db.Decimal(12, 2)
   price         Decimal  @default(0) @db.Decimal(12, 2)
@@ -126,14 +135,18 @@ model Product {
   isTrending        Boolean @default(false)
   ratingAvg         Float   @default(0)
   ratingCount       Int     @default(0)
-  deliveryDaysMin   Int?
-  deliveryDaysMax   Int?
+
+  deliveryDaysMin Int?
+  deliveryDaysMax Int?
 
   specs Json?
   tags  String[] @default([])
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
 
   translations ProductTranslation[]
   media        ProductMedia[]

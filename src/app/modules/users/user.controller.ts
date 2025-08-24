@@ -2,19 +2,11 @@ import { StatusCodes } from "http-status-codes";
 import catchAsync from "../../utils/catchAsync";
 import responseHandler from "../../utils/responseHandler";
 import { UserService } from "./users.service";
-import { QueryParams } from "../../utils/PrismaQueryBuilder";
+import { QueryParams } from "../../utils/builder/PrismaQueryBuilder";
 import { Request, Response } from "express";
 import qs from "qs";
+import { parseQueryParams } from "../../utils/builder/parseQueryParams";
 
-// Helper to safely parse JSON
-const parseJSON = (value?: string) => {
-  if (!value) return undefined;
-  try {
-    return JSON.parse(value);
-  } catch {
-    return undefined;
-  }
-};
 
 // Create a user
 const createUser = catchAsync(async (req, res) => {
@@ -31,16 +23,7 @@ const createUser = catchAsync(async (req, res) => {
 
 // Get all users
 const getAllUsers = catchAsync(async (req: Request, res: Response) => {
-  const parsedQuery = qs.parse(req.query as any);
-
-  const query: QueryParams = {
-    search: parsedQuery.search as string | undefined,
-    filter: parsedQuery.filter as Record<string, any> | undefined,
-    sortBy: parsedQuery.sortBy as string | undefined,
-    sortOrder: parsedQuery.sortOrder === "desc" ? "desc" : "asc",
-    page: parsedQuery.page ? Number(parsedQuery.page) : undefined,
-    limit: parsedQuery.limit ? Number(parsedQuery.limit) : undefined,
-  };
+   const query = parseQueryParams(req);
 
   const result = await UserService.getAllUsers(query);
   responseHandler({

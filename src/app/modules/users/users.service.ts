@@ -5,7 +5,7 @@ import { StatusCodes } from "http-status-codes";
 import {
   PrismaQueryBuilder,
   QueryParams,
-} from "../../utils/PrismaQueryBuilder";
+} from "../../utils/builder/PrismaQueryBuilder";
 import { hashPassword } from "../../utils/hashPassword";
 
 // Create a user

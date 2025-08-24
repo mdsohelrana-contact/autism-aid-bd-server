@@ -6,7 +6,7 @@ import { ensureUserExists } from "../../utils/ensureUserExists ";
 import {
   PrismaQueryBuilder,
   QueryParams,
-} from "../../utils/PrismaQueryBuilder";
+} from "../../utils/builder/PrismaQueryBuilder";
 
 // Create an address
 const createAddress = async (userId: string, data: Address) => {

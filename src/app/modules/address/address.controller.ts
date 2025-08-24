@@ -3,7 +3,8 @@ import catchAsync from "../../utils/catchAsync";
 import responseHandler from "../../utils/responseHandler";
 import { AddressService } from "./address.service";
 import qs from "qs"; // nested query parse করতে
-import { QueryParams } from "../../utils/PrismaQueryBuilder";
+import { QueryParams } from "../../utils/builder/PrismaQueryBuilder";
+import { parseQueryParams } from "../../utils/builder/parseQueryParams";
 
 // Create address handler
 const createAddress = catchAsync(async (req, res) => {
@@ -24,17 +25,7 @@ const createAddress = catchAsync(async (req, res) => {
 const getAll = catchAsync(async (req, res) => {
   const userId = req!.user!.id;
 
-  const parsedQuery = qs.parse(req.query as any);
-
-  const query: QueryParams = {
-    search: parsedQuery.search as string | undefined,
-    filter: parsedQuery.filter as Record<string, any> | undefined,
-    sortBy: parsedQuery.sortBy as string | undefined,
-    sortOrder: parsedQuery.sortOrder === "desc" ? "desc" : "asc",
-    page: parsedQuery.page ? Number(parsedQuery.page) : undefined,
-    limit: parsedQuery.limit ? Number(parsedQuery.limit) : undefined,
-    cursor: parsedQuery.cursor as string | undefined,
-  };
+  const query = parseQueryParams(req);
 
   const result = await AddressService.getAllAddress(userId, query);
   responseHandler({
