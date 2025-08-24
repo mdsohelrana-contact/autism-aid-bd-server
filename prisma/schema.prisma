@@ -76,12 +76,13 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  addresses    Address[]
-  carts        Cart[]
-  orders       Order[]
-  reviews      Review[]
-  Notification Notification[]
-  Product      Product[]
+  addresses          Address[]
+  carts              Cart[]
+  orders             Order[]
+  reviews            Review[]
+  Notification       Notification[]
+  Product            Product[]
+  ProductTranslation ProductTranslation[]
 
   @@map("users")
 }
@@ -120,6 +121,7 @@ model Product {
   brand       String?
   description String
   benefits    String
+  // usage       String (Added after )
   ageMin      Int?
   ageMax      Int?
 
@@ -147,7 +149,6 @@ model Product {
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-
   translations ProductTranslation[]
   media        ProductMedia[]
   categories   ProductOnCategory[]
@@ -168,6 +169,7 @@ model Product {
 model ProductTranslation {
   id          String  @id @default(cuid())
   productId   String
+  userId      String
   locale      Locale
   name        String
   slug        String
@@ -179,6 +181,7 @@ model ProductTranslation {
   benefits    String?
 
   product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([productId, locale])
   @@unique([locale, slug])

@@ -4,6 +4,7 @@ import { userRoutes } from "../modules/users/user.route";
 import { authRoutes } from "../modules/auth/auth.route";
 import { addressRoutes } from "../modules/address/address.routes";
 import { productRoutes } from "../modules/product/product.routes";
+import { productTranslationRoutes } from "../modules/productTranslation/productTranslation.routes";
 
 const routers = Router();
 
@@ -18,6 +19,7 @@ const moduleRoutes: ModuleRoute[] = [
   { path: "/", route: authRoutes },
   { path: "/address", route: addressRoutes },
   { path: "/products", route: productRoutes },
+  { path: "/product-translations", route: productTranslationRoutes },
 ];
 
 moduleRoutes.forEach(({ path, route }) => routers.use(path, route));
