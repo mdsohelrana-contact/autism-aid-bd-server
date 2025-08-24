@@ -7,271 +7,140 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// ENUMS
+//  ENUMS 
 enum Locale {
   bn
   en
 }
 
 enum Role {
-  CUSTOMER
   ADMIN
-  EDITOR
-  SUPPORT
+  CUSTOMER
+  STAFF
 }
 
 enum ProductStatus {
-  DRAFT
   ACTIVE
-  ARCHIVED
+  INACTIVE
+  DRAFT
 }
 
 enum OrderStatus {
   PENDING
   CONFIRMED
-  PROCESSING
   SHIPPED
   DELIVERED
   CANCELLED
-  RETURN_REQUESTED
   RETURNED
 }
 
-enum PaymentMethod {
-  BKASH
-  NAGAD
-  SSLCOMMERZ
-  COD
+enum BlogStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
 }
 
 enum PaymentStatus {
-  INITIATED
-  AUTHORIZED
-  CAPTURED
+  PENDING
+  PAID
   FAILED
   REFUNDED
 }
 
-enum DeliveryMethod {
-  HOME_DELIVERY
-  PICKUP_PARTNER
-}
-
-enum StockEventType {
+// NotificationType
+enum NotificationType {
   ORDER_PLACED
   ORDER_CANCELLED
-  MANUAL_ADJUST
-  RETURN_IN
+  ORDER_RETURNED
+  ORDER_SHIPPED
+  ORDER_DELIVERED
+  ORDER_CONFIRMED
+  ORDER_REFUNDED
+  ORDER_PAID
+  PROMOTION // Coupon, Discount, Offer
+  SYSTEM_ALERT // Admin notice
+  BLOG_POST // New blog published
 }
 
-// CORE USER MODEL
+// USER 
 model User {
-  id       String  @id @default(cuid())
-  phone    String  @unique
-  email    String? @unique
-  name     String
-  role     Role    @default(CUSTOMER)
-  password String
-
+  id        String  @id @default(cuid())
+  phone     String  @unique
+  email     String? @unique
+  name      String?
+  role      Role    @default(CUSTOMER)
+  password  String?
   isBanned  Boolean @default(false)
   isDeleted Boolean @default(false)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  addresses Address[]
-  orders    Order[]
-  reviews   Review[]
-  carts     Cart[]
-  BlogPost  BlogPost[]
+  addresses    Address[]
+  carts        Cart[]
+  orders       Order[]
+  reviews      Review[]
+  Notification Notification[]
 
-  @@index([role])
-  @@index([phone])
   @@map("users")
 }
 
-// ADDRESS
+//  ADDRESS 
 model Address {
-  id String @id @default(cuid())
+  id        String  @id @default(cuid())
+  userId    String
+  label     String?
+  name      String
+  phone     String
+  city      String
+  area      String
+  lat       Float?
+  lng       Float?
+  isDefault Boolean @default(false)
 
-  userId String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  Order  Order[]
+  orders Order[]
 
-  label      String // e.g., "Home", "Office"
-  name       String
-  phone      String
-  line1      String
-  line2      String?
-  city       String
-  area       String?
-  postalCode String?
-  country    String  @default("Bangladesh")
-  lat        Float?
-  lng        Float?
-  isDefault  Boolean @default(false)
-
-  @@index([userId, isDefault])
-  @@index([city, area])
   @@map("addresses")
 }
 
-//  PARTNER CENTER 
-model PartnerCenter {
-  id      String  @id @default(cuid())
-  code    String  @unique
-  name    String
-  address String
-  lat     Float
-  lng     Float
-  phone   String?
-  active  Boolean @default(true)
-
-  orders Order[]
-
-  @@index([active])
-  @@map("partner_centers")
-}
-
-// TAXONOMY: Condition / Category / AgeRange / Tag 
-model Condition {
-  id        String                 @id @default(cuid())
-  key       String                 @unique
-  createdAt DateTime               @default(now())
-  products  ProductOnCondition[]
-  i18n      ConditionTranslation[]
-
-  @@index([key])
-  @@map("conditions")
-}
-
-model ConditionTranslation {
-  id          String  @id @default(cuid())
-  conditionId String
-  locale      Locale
-  name        String
-  slug        String
-  description String?
-
-  condition Condition @relation(fields: [conditionId], references: [id], onDelete: Cascade)
-
-  @@unique([conditionId, locale])
-  @@unique([locale, slug])
-  @@index([name])
-  @@map("conditions_translations")
-}
-
-model Category {
-  id        String                @id @default(cuid())
-  key       String                @unique
-  parentId  String?
-  parent    Category?             @relation("CategoryToSelf", fields: [parentId], references: [id])
-  children  Category[]            @relation("CategoryToSelf")
-  createdAt DateTime              @default(now())
-  products  ProductOnCategory[]
-  i18n      CategoryTranslation[]
-
-  @@index([key])
-  @@index([parentId])
-  @@map("categories")
-}
-
-model CategoryTranslation {
-  id         String  @id @default(cuid())
-  categoryId String
-  locale     Locale
-  name       String
-  slug       String
-  seoTitle   String?
-  seoDesc    String?
-
-  category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
-
-  @@unique([categoryId, locale])
-  @@unique([locale, slug])
-  @@index([name])
-  @@map("categories_translations")
-}
-
-model AgeRange {
-  id       String                @id @default(cuid())
-  key      String                @unique
-  i18n     AgeRangeTranslation[]
-  products Product[]
-
-  @@index([key])
-  @@map("age_ranges")
-}
-
-model AgeRangeTranslation {
-  id         String @id @default(cuid())
-  ageRangeId String
-  locale     Locale
-  name       String
-
-  ageRange AgeRange @relation(fields: [ageRangeId], references: [id], onDelete: Cascade)
-
-  @@unique([ageRangeId, locale])
-  @@map("age_ranges_translations")
-}
-
-model Tag {
-  id       String           @id @default(cuid())
-  key      String           @unique
-  i18n     TagTranslation[]
-  products ProductOnTag[]
-
-  @@index([key])
-  @@map("tags")
-}
-
-model TagTranslation {
-  id     String @id @default(cuid())
-  tagId  String
-  locale Locale
-  name   String
-
-  tag Tag @relation(fields: [tagId], references: [id], onDelete: Cascade)
-
-  @@unique([tagId, locale])
-  @@map("tags_translations")
-}
-
-// PRODUCT 
+//  PRODUCT 
 model Product {
   id     String        @id @default(cuid())
   sku    String        @unique
   status ProductStatus @default(ACTIVE)
   brand  String?
 
-  ageRangeId String?
-  ageRange   AgeRange? @relation(fields: [ageRangeId], references: [id])
+  basePrice     Decimal  @default(0) @db.Decimal(12, 2)
+  price         Decimal  @default(0) @db.Decimal(12, 2)
+  discountPrice Decimal? @db.Decimal(12, 2)
 
-  price             Decimal  @db.Decimal(12, 2)
-  currency          String   @default("BDT")
-  compareAtPrice    Decimal? @db.Decimal(12, 2)
-  stockQty          Int      @default(0)
-  lowStockThreshold Int      @default(3)
-  isNew             Boolean  @default(false)
-  isTrending        Boolean  @default(false)
-  ratingAvg         Float    @default(0)
-  ratingCount       Int      @default(0)
+  currency String @default("BDT")
+
+  stockQty          Int     @default(0)
+  lowStockThreshold Int     @default(3)
+  isNew             Boolean @default(false)
+  isTrending        Boolean @default(false)
+  ratingAvg         Float   @default(0)
+  ratingCount       Int     @default(0)
   deliveryDaysMin   Int?
   deliveryDaysMax   Int?
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+
+  specs Json?
+  tags  String[] @default([])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   translations ProductTranslation[]
   media        ProductMedia[]
-  specs        ProductSpec[]
-  conditions   ProductOnCondition[]
   categories   ProductOnCategory[]
-  tags         ProductOnTag[]
   orderItems   OrderItem[]
   reviews      Review[]
   stockLogs    StockLog[]
-  relatedFrom  RelatedProduct[]     @relation("RelatedFrom")
-  relatedTo    RelatedProduct[]     @relation("RelatedTo")
   CartItem     CartItem[]
 
   @@index([status, createdAt])
@@ -282,7 +151,7 @@ model Product {
   @@map("products")
 }
 
-//  PRODUCT TRANSLATIONS
+//  PRODUCT TRANSLATION 
 model ProductTranslation {
   id          String  @id @default(cuid())
   productId   String
@@ -304,272 +173,204 @@ model ProductTranslation {
   @@map("products_translations")
 }
 
-//PRODUCT MEDIA
+//  PRODUCT MEDIA 
 model ProductMedia {
   id        String  @id @default(cuid())
   productId String
-  type      String // image|video|youtube
   url       String
-  position  Int     @default(0)
+  type      String?
   alt       String?
-  locale    Locale?
+
+  createdAt DateTime @default(now())
 
   product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 
-  @@index([productId, position])
-  @@map("products_media")
+  @@map("product_media")
 }
 
-// PRODUCT SPEC
-model ProductSpec {
-  id        String @id @default(cuid())
-  productId String
-  key       String
-  value     String
+//  CATEGORY 
+model Category {
+  id       String  @id @default(cuid())
+  parentId String?
 
-  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  @@index([productId, key])
-  @@map("products_specs")
+  parent       Category?             @relation("CategoryHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
+  children     Category[]            @relation("CategoryHierarchy")
+  translations CategoryTranslation[]
+  products     ProductOnCategory[]
+
+  @@map("categories")
 }
 
-// RELATIONS MAPPING
+model CategoryTranslation {
+  id          String  @id @default(cuid())
+  categoryId  String
+  locale      Locale
+  name        String
+  slug        String
+  description String?
+
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@unique([categoryId, locale])
+  @@unique([locale, slug])
+  @@index([name])
+  @@map("categories_translations")
+}
+
 model ProductOnCategory {
   productId  String
   categoryId String
-  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
-  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  product  Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
 
   @@id([productId, categoryId])
-  @@index([categoryId])
   @@map("products_categories")
 }
 
-model ProductOnCondition {
-  productId   String
-  conditionId String
-  product     Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
-  condition   Condition @relation(fields: [conditionId], references: [id], onDelete: Cascade)
-
-  @@id([productId, conditionId])
-  @@index([conditionId])
-  @@map("products_conditions")
-}
-
-model ProductOnTag {
-  productId String
-  tagId     String
-  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
-  tag       Tag     @relation(fields: [tagId], references: [id], onDelete: Cascade)
-
-  @@id([productId, tagId])
-  @@index([tagId])
-  @@map("products_tags")
-}
-
-model RelatedProduct {
-  id        String   @id @default(cuid())
-  fromId    String
-  toId      String
-  relation  String? // e.g. "ACCESSORY", "SIMILAR", "ALTERNATIVE"
-  createdAt DateTime @default(now())
-
-  from Product @relation("RelatedFrom", fields: [fromId], references: [id])
-  to   Product @relation("RelatedTo", fields: [toId], references: [id])
-
-  @@unique([fromId, toId])
-  @@map("related_products")
-}
-
-model StockLog {
-  id        String         @id @default(cuid())
-  productId String
-  delta     Int // +ve: stock added, -ve: stock removed
-  type      StockEventType
-  note      String? // reason for stock change
-  createdAt DateTime       @default(now())
-
-  // Relations
-  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
-
-  @@index([productId, createdAt])
-  @@index([type])
-  @@map("stock_logs")
-}
-
-//  CART
+//  CART 
 model Cart {
-  id        String     @id @default(cuid())
-  userId    String?
-  user      User?      @relation(fields: [userId], references: [id], onDelete: SetNull)
-  sessionId String? // guest carts
-  locale    Locale     @default(bn)
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
-  items     CartItem[]
+  id     String @id @default(cuid())
+  userId String @unique
 
-  @@index([userId])
-  @@index([sessionId])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user   User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items  CartItem[]
+  orders Order[]
+
   @@map("carts")
 }
 
 model CartItem {
-  id        String  @id @default(cuid())
+  id        String @id @default(cuid())
   cartId    String
-  productId String?
-  qty       Int     @default(1)
-  unitPrice Decimal @db.Decimal(12, 2)
+  productId String
+  quantity  Int    @default(1)
 
-  cart    Cart     @relation(fields: [cartId], references: [id], onDelete: Cascade)
-  product Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  cart    Cart    @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   @@unique([cartId, productId])
   @@map("cart_items")
 }
 
-// ORDER / PAYMENT / SHIPMENT 
+//  ORDER 
 model Order {
-  id             String         @id @default(cuid())
-  orderNo        String         @unique
-  status         OrderStatus    @default(PENDING)
-  deliveryMethod DeliveryMethod
-  paymentMethod  PaymentMethod
-  paymentStatus  PaymentStatus  @default(INITIATED)
-  subtotal       Decimal        @db.Decimal(12, 2)
-  discountTotal  Decimal        @default(0) @db.Decimal(12, 2)
-  deliveryFee    Decimal        @default(0) @db.Decimal(12, 2)
-  grandTotal     Decimal        @db.Decimal(12, 2)
-  createdAt      DateTime       @default(now())
-  updatedAt      DateTime       @updatedAt
+  id         String      @id @default(cuid())
+  userId     String
+  cartId     String?
+  addressId  String?
+  status     OrderStatus @default(PENDING)
+  total      Decimal     @default(0) @db.Decimal(12, 2)
+  discount   Decimal     @default(0) @db.Decimal(12, 2)
+  finalTotal Decimal     @default(0) @db.Decimal(12, 2)
 
-  // Relations
-  userId String?
-  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  shippingAddressId String?
-  shippingAddress   Address? @relation(fields: [shippingAddressId], references: [id], onDelete: SetNull)
+  user     User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  cart     Cart?       @relation(fields: [cartId], references: [id], onDelete: SetNull)
+  address  Address?    @relation(fields: [addressId], references: [id], onDelete: SetNull)
+  items    OrderItem[]
+  payments Payment[]
 
-  partnerCenterId String?
-  partnerCenter   PartnerCenter? @relation(fields: [partnerCenterId], references: [id], onDelete: SetNull)
-
-  couponId String?
-  coupon   Coupon? @relation(fields: [couponId], references: [id], onDelete: SetNull)
-
-  items          OrderItem[]
-  payments       Payment[]
-  trackingEvents TrackingEvent[]
-
-  // Indices
   @@index([status, createdAt])
-  @@index([userId])
   @@map("orders")
 }
 
 model OrderItem {
   id        String  @id @default(cuid())
   orderId   String
-  productId String?
-  name      String // snapshot for invoice
-  locale    Locale  @default(bn)
-  unitPrice Decimal @db.Decimal(12, 2)
-  qty       Int
-  lineTotal Decimal @db.Decimal(12, 2)
+  productId String
+  quantity  Int     @default(1)
+  price     Decimal @default(0) @db.Decimal(12, 2)
 
-  order   Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  product Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+  order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 
-  @@index([orderId])
   @@map("order_items")
 }
 
+//  PAYMENT 
 model Payment {
-  id           String        @id @default(cuid())
-  orderId      String
-  method       PaymentMethod
-  status       PaymentStatus @default(INITIATED)
-  gatewayTxnId String?
-  amount       Decimal       @db.Decimal(12, 2)
-  rawPayload   Json?
-  createdAt    DateTime      @default(now())
+  id      String        @id @default(cuid())
+  orderId String
+  amount  Decimal       @default(0) @db.Decimal(12, 2)
+  status  PaymentStatus @default(PENDING)
+  method  String?
+
+  createdAt DateTime @default(now())
 
   order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
 
-  @@index([orderId, status, method])
   @@map("payments")
 }
 
-model TrackingEvent {
-  id        String      @id @default(cuid())
-  orderId   String
-  status    OrderStatus
-  note      String?
-  location  String?
-  createdAt DateTime    @default(now())
+//  REVIEW 
+model Review {
+  id        String  @id @default(cuid())
+  userId    String
+  productId String
+  rating    Int     @default(5)
+  comment   String?
 
-  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
 
-  @@index([orderId, createdAt])
-  @@map("tracking_events")
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, userId])
+  @@map("reviews")
 }
 
-// ---------- COUPON / DISCOUNT ----------
+//  STOCK LOG 
+model StockLog {
+  id        String  @id @default(cuid())
+  productId String
+  quantity  Int
+  type      String
+  note      String?
+
+  createdAt DateTime @default(now())
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@map("stock_logs")
+}
+
+//  COUPON 
 model Coupon {
-  id            String    @id @default(cuid())
-  code          String    @unique
-  description   String?
-  active        Boolean   @default(true)
-  percentageOff Float? // e.g., 10%
-  amountOff     Decimal?  @db.Decimal(12, 2)
-  minSubtotal   Decimal?  @db.Decimal(12, 2)
-  maxUses       Int?
-  usedCount     Int       @default(0)
-  startsAt      DateTime?
-  endsAt        DateTime?
+  id         String   @id @default(cuid())
+  code       String   @unique
+  discount   Decimal  @default(0) @db.Decimal(5, 2)
+  validFrom  DateTime
+  validUntil DateTime
+  isActive   Boolean  @default(true)
 
-  orders Order[]
+  createdAt DateTime @default(now())
 
-  @@index([active, startsAt, endsAt])
   @@map("coupons")
 }
 
-// ---------- BLOG / AWARENESS ----------
-model BlogCategory {
-  id    String                    @id @default(cuid())
-  key   String                    @unique
-  posts BlogPost[]
-  i18n  BlogCategoryTranslation[]
-
-  @@index([key])
-  @@map("blog_categories")
-}
-
-model BlogCategoryTranslation {
-  id             String @id @default(cuid())
-  blogCategoryId String
-  locale         Locale
-  name           String
-  slug           String
-
-  blogCategory BlogCategory @relation(fields: [blogCategoryId], references: [id], onDelete: Cascade)
-
-  @@unique([blogCategoryId, locale])
-  @@unique([locale, slug])
-  @@map("blog_category_translations")
-}
-
+//  BLOG 
 model BlogPost {
-  id           String                @id @default(cuid())
-  status       String                @default("PUBLISHED")
-  authorId     String?
-  author       User?                 @relation(fields: [authorId], references: [id], onDelete: SetNull)
-  createdAt    DateTime              @default(now())
-  updatedAt    DateTime              @updatedAt
-  categoryId   String?
-  category     BlogCategory?         @relation(fields: [categoryId], references: [id], onDelete: SetNull)
-  coverUrl     String?
+  id     String     @id @default(cuid())
+  status BlogStatus @default(DRAFT)
+  cover  String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   translations BlogPostTranslation[]
 
-  @@index([status, createdAt])
   @@map("blog_posts")
 }
 
@@ -583,6 +384,7 @@ model BlogPostTranslation {
   content    String?
   seoTitle   String?
   seoDesc    String?
+  coverAlt   String?
 
   blogPost BlogPost @relation(fields: [blogPostId], references: [id], onDelete: Cascade)
 
@@ -592,81 +394,38 @@ model BlogPostTranslation {
   @@map("blog_post_translations")
 }
 
-// ---------- FAQ ----------
-model FAQ {
-  id       String           @id @default(cuid())
-  key      String           @unique
-  i18n     FAQTranslation[]
-  category String? // therapy/equipment-use/payment/shipping
-  position Int              @default(0)
-
-  @@map("faqs")
-}
-
-model FAQTranslation {
-  id       String @id @default(cuid())
-  faqId    String
-  locale   Locale
-  question String
-  answer   String
-
-  faq FAQ @relation(fields: [faqId], references: [id], onDelete: Cascade)
-
-  @@unique([faqId, locale])
-  @@map("faq_translations")
-}
-
-// ---------- OFFER BANNER ----------
+// OFFER BANNER
 model OfferBanner {
-  id           String    @id @default(cuid())
-  title        String
-  message      String
-  active       Boolean   @default(true)
-  lat          Float?
-  lng          Float?
-  radiusKm     Float?
-  regionCode   String?
-  freeDelivery Boolean   @default(false)
-  pickupHint   Boolean   @default(false)
-  startsAt     DateTime?
-  endsAt       DateTime?
-  slug         String    @unique
-  locale       Locale    @default(bn)
-  createdAt    DateTime  @default(now())
+  id       String  @id @default(cuid())
+  slug     String  @unique
+  title    String
+  subtitle String?
+  imageUrl String?
+  linkUrl  String?
+  seoTitle String?
+  seoDesc  String?
 
-  @@index([active, startsAt, endsAt])
-  @@index([regionCode])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   @@map("offer_banners")
 }
 
-// REVIEW
-model Review {
-  id        String   @id @default(cuid())
-  productId String
-  userId    String
-  rating    Int // 1..5
-  title     String? // SEO friendly title
-  body      String? // review content
-  locale    Locale   @default(bn)
-  createdAt DateTime @default(now())
-  approved  Boolean  @default(true)
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String? // null হলে global (সবার জন্য)
+  type      NotificationType
+  title     String
+  message   String
+  link      String?
+  read      Boolean          @default(false)
+  delivered Boolean          @default(false) // Push / Email / SMS status
+  meta      Json? // Extra data (orderId, productId etc.)
+  createdAt DateTime         @default(now())
+  readAt    DateTime?
 
-  // Relations
-  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
-  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User? @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique([productId, userId]) // unique review
-  @@index([productId, approved]) // approved filter query fast
-  @@index([locale]) // multilingual filter
-  @@map("reviews")
-}
-
-// ---------- NEWSLETTER ----------
-model NewsletterSubscription {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  locale    Locale   @default(bn)
-  createdAt DateTime @default(now())
-
-  @@map("newsletter_subscriptions")
+  @@index([userId, read])
+  @@map("notifications")
 }

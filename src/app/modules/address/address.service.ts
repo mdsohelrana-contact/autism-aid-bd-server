@@ -24,7 +24,6 @@ const createAddress = async (userId: string, data: Address) => {
   // Force country to Bangladesh
   const addressData: Prisma.AddressCreateInput = {
     ...data,
-    country: "Bangladesh",
     user: { connect: { id: userId } },
   };
 
