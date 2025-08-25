@@ -4,7 +4,6 @@ import { userRoutes } from "../modules/users/user.route";
 import { authRoutes } from "../modules/auth/auth.route";
 import { addressRoutes } from "../modules/address/address.routes";
 import { productRoutes } from "../modules/product/product.routes";
-import { productTranslationRoutes } from "../modules/translation/productTranslation/productTranslation.routes";
 import { productMediaRoutes } from "../modules/productMedia/productMedia.routes";
 import { categoryRoutes } from "../modules/category/category.routes";
 
@@ -21,7 +20,6 @@ const moduleRoutes: ModuleRoute[] = [
   { path: "/", route: authRoutes },
   { path: "/address", route: addressRoutes },
   { path: "/products", route: productRoutes },
-  { path: "/product-translations", route: productTranslationRoutes },
   { path: "/product-media", route: productMediaRoutes },
   { path: "/categories", route: categoryRoutes },
 ];

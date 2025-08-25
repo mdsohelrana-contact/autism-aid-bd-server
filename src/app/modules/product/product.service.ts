@@ -11,32 +11,95 @@ import {
 } from "../../utils/builder/PrismaQueryBuilder";
 import { ensureUserExists } from "../../utils/user/ensureUserExists ";
 
-// Create a product
-const createProduct = async (userId: string, data: any) => {
-  if (!userId) {
-    throw new AppError(
-      StatusCodes.BAD_REQUEST,
-      "User ID is missing or invalid. Please login or provide a valid user ID."
-    );
-  }
+interface TranslationInput {
+  locale: string;
+  name: string;
+  slug: string;
+  description?: string;
+}
+
+interface CreateProductInput {
+  name: string;
+  sku?: string;
+  description: string;
+  benefits: string;
+  brand?: string | null;
+  status?: "ACTIVE" | "INACTIVE";
+  currency?: string;
+  basePrice?: number;
+  price?: number;
+  discountPrice?: number;
+  stockQty?: number;
+  lowStockThreshold?: number;
+  isNew?: boolean;
+  isTrending?: boolean;
+  deliveryDaysMin?: number | null;
+  deliveryDaysMax?: number | null;
+  ageMin?: number | null;
+  ageMax?: number | null;
+  specs?: any;
+  tags?: string[];
+  categoryIds: string[];
+  translations: TranslationInput[];
+}
+
+export const createProduct = async (
+  userId: string,
+  data: any
+) => {
+  if (!userId) throw new AppError(StatusCodes.BAD_REQUEST, "User ID missing");
 
   await ensureUserExists(userId);
 
+  // Auto-generate SKU if missing
   if (!data.sku) data.sku = generateSKU(data.name);
 
-  data.status = data.status || "ACTIVE";
-  data.currency = data.currency || "BDT";
-  data.stockQty = data.stockQty ?? 0;
-  data.lowStockThreshold = data.lowStockThreshold ?? 3;
-  data.isNew = data.isNew ?? false;
-  data.isTrending = data.isTrending ?? false;
+  // Set default values
+  const productData = {
+    ...data,
+    status: data.status || "ACTIVE",
+    currency: data.currency || "BDT",
+    stockQty: data.stockQty ?? 0,
+    lowStockThreshold: data.lowStockThreshold ?? 3,
+    isNew: data.isNew ?? false,
+    isTrending: data.isTrending ?? false,
+  };
 
-  const product = await prisma.product.create({
-    data: {
-      ...data,
-      userId,
-    },
-  });
+  const { categoryIds, translations, ...rest } = productData;
+
+  // Prisma create with nested relations
+const product = await prisma.product.create({
+  data: {
+    ...rest,
+    userId,
+    translations: translations?.length
+      ? {
+          create: translations.map((t:any) => ({
+            locale: t.locale as any,
+            name: t.name,
+            slug: t.slug,
+            description: t.description,
+            userId,
+          })),
+        }
+      : undefined,
+    categories: categoryIds?.length
+      ? {
+          create: categoryIds.map((id:any) => ({
+            category: { connect: { id } },
+            
+          })),
+        }
+      : undefined,
+  },
+  include: {
+    translations: true,
+    categories: { include: { category: true, } },
+    media: true,
+    reviews: true,
+  },
+});
+
 
   return product;
 };
@@ -61,15 +124,24 @@ const getAllProducts = async (query: QueryParams) => {
   }
 
   // Fetch products with related data
-  const data = await prisma.product.findMany({
-    ...prismaQuery,
-    include: {
-      translations: true,
-      media: true,
-      categories: true,
-      reviews: true,
+const data = await prisma.product.findMany({
+  ...prismaQuery,
+  include: {
+    translations: true,
+    media: true,
+    reviews: true,
+    categories: {
+      include: {
+        category: {       // Category details
+          include: {
+            translations: true, // Category translations
+          },
+        },
+      },
     },
-  });
+  },
+});
+
 
   // Determine current page & limit
   const page = query.page ? Number(query.page) : 1;
