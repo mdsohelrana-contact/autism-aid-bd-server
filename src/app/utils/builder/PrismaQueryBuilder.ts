@@ -22,19 +22,31 @@ export class PrismaQueryBuilder<T> {
   }
 
   // Search
-  search(searchingFields: (keyof T)[]) {
+  search(searchingFields: (keyof T | string)[]) {
     const search = this.query.search;
     if (search && searchingFields.length) {
-      this.where.OR = searchingFields.map((field) => ({
-        [field]: { contains: search, mode: "insensitive" },
-      }));
+      this.where.OR = searchingFields.map((field) => {
+        if (typeof field === "string") {
+          const keys = field.split("."); // ✅ safe now
+          if (keys.length === 2) {
+            // nested field
+            return {
+              [keys[0]]: {
+                some: { [keys[1]]: { contains: search, mode: "insensitive" } },
+              },
+            };
+          } else {
+            return { [field]: { contains: search, mode: "insensitive" } };
+          }
+        }
+        return {}; // fallback, ignore non-string keys
+      });
     }
     return this;
   }
-
-  // Filter
-  filter() {
-    const filter = this.query.filter || {};
+// Filter
+filter() {
+  const filter = this.query.filter || {};
 
     Object.keys(filter).forEach((key) => {
       let value: any = filter[key];

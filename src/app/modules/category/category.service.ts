@@ -2,6 +2,8 @@ import { StatusCodes } from "http-status-codes";
 import AppError from "../../errors/AppError";
 import prisma from "../../utils/prisma";
 import { checkExistsProductRelation } from "../../utils/product/checkExistsProductRelate";
+import { PrismaQueryBuilder } from "../../utils/builder/PrismaQueryBuilder";
+import { Category } from "@prisma/client";
 
 const createCategory = async (data: any) => {
   return prisma.category.create({
@@ -15,16 +17,52 @@ const createCategory = async (data: any) => {
   });
 };
 
-const getAllCategories = async () => {
-  return prisma.category.findMany({
+const getAllCategories = async (query: any) => {
+  // Initialize query builder
+  const qb = new PrismaQueryBuilder(query)
+    .search(["translations.name"])
+    .filter()
+    .sort()
+    .paginate();
+
+  const prismaQuery = qb.build();
+
+  // Count total categories for pagination
+  const total = await prisma.category.count({
+    where: prismaQuery.where,
+  });
+
+  if (total === 0) {
+    throw new AppError(StatusCodes.NOT_FOUND, "No categories found");
+  }
+
+  // Fetch categories with translations and children
+  const data = await prisma.category.findMany({
+    ...prismaQuery,
     include: {
       translations: true,
       children: {
-        include: { translations: true },
+        include: {
+          translations: true,
+        },
       },
     },
-    orderBy: { createdAt: "desc" },
   });
+
+  // Determine current page & limit
+  const page = query.page ? Number(query.page) : 1;
+  const limit = query.limit ? Number(query.limit) : 10;
+  const hasNextPage = page * limit < total;
+
+  return {
+    data,
+    meta: {
+      total,
+      page,
+      limit,
+      hasNextPage,
+    },
+  };
 };
 
 const getCategoryById = async (id: string) => {
@@ -60,7 +98,7 @@ const updateCategory = async (
       parentId: data.parentId,
       translations: data.translations
         ? {
-            deleteMany: {}, // পুরোনো translations replace করার জন্য
+            deleteMany: {},
             create: data.translations,
           }
         : undefined,
