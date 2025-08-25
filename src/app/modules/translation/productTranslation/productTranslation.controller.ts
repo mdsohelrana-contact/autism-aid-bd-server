@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
-import catchAsync from "../../utils/catchAsync";
+import catchAsync from "../../../utils/catchAsync";
 import { ProductTranslationService } from "./productTranslation.service";
-import responseHandler from "../../utils/responseHandler";
+import responseHandler from "../../../utils/responseHandler";
 import { StatusCodes } from "http-status-codes";
 
 // Create translation

@@ -14,11 +14,13 @@ const app: Application = express();
 app.use(helmet());
 app.use(cors());
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
+// Logging
+app.use(morgan("combined"));
 
-
-if (config.nodeEnv !== 'production') {
-  app.use(morgan('dev'));
+if (config.nodeEnv !== "production") {
+  app.use(morgan("dev"));
 }
 
 

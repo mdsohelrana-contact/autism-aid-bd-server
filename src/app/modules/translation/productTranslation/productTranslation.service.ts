@@ -1,6 +1,6 @@
 import { StatusCodes } from "http-status-codes";
-import prisma from "../../utils/prisma";
-import AppError from "../../errors/AppError";
+import prisma from "../../../utils/prisma";
+import AppError from "../../../errors/AppError";
 
 
 // Create a product translation
