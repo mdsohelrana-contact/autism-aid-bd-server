@@ -2,7 +2,7 @@ import { StatusCodes } from "http-status-codes";
 import AppError from "../../errors/AppError";
 import prisma from "../../utils/prisma";
 import { checkExistsProductRelation } from "../../utils/product/checkExistsProductRelate";
-import { PrismaQueryBuilder } from "../../utils/builder/PrismaQueryBuilder";
+import { PrismaQueryBuilder, QueryParams } from "../../utils/builder/PrismaQueryBuilder";
 import { Category } from "@prisma/client";
 
 const createCategory = async (data: any) => {
@@ -17,7 +17,7 @@ const createCategory = async (data: any) => {
   });
 };
 
-const getAllCategories = async (query: any) => {
+const getAllCategories = async (query: QueryParams) => {
   // Initialize query builder
   const qb = new PrismaQueryBuilder(query)
     .search(["translations.name"])

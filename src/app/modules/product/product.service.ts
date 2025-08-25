@@ -43,10 +43,7 @@ interface CreateProductInput {
   translations: TranslationInput[];
 }
 
-export const createProduct = async (
-  userId: string,
-  data: any
-) => {
+export const createProduct = async (userId: string, data: any) => {
   if (!userId) throw new AppError(StatusCodes.BAD_REQUEST, "User ID missing");
 
   await ensureUserExists(userId);
@@ -68,38 +65,36 @@ export const createProduct = async (
   const { categoryIds, translations, ...rest } = productData;
 
   // Prisma create with nested relations
-const product = await prisma.product.create({
-  data: {
-    ...rest,
-    userId,
-    translations: translations?.length
-      ? {
-          create: translations.map((t:any) => ({
-            locale: t.locale as any,
-            name: t.name,
-            slug: t.slug,
-            description: t.description,
-            userId,
-          })),
-        }
-      : undefined,
-    categories: categoryIds?.length
-      ? {
-          create: categoryIds.map((id:any) => ({
-            category: { connect: { id } },
-            
-          })),
-        }
-      : undefined,
-  },
-  include: {
-    translations: true,
-    categories: { include: { category: true, } },
-    media: true,
-    reviews: true,
-  },
-});
-
+  const product = await prisma.product.create({
+    data: {
+      ...rest,
+      userId,
+      translations: translations?.length
+        ? {
+            create: translations.map((t: any) => ({
+              locale: t.locale as any,
+              name: t.name,
+              slug: t.slug,
+              description: t.description,
+              userId,
+            })),
+          }
+        : undefined,
+      categories: categoryIds?.length
+        ? {
+            create: categoryIds.map((id: any) => ({
+              category: { connect: { id } },
+            })),
+          }
+        : undefined,
+    },
+    include: {
+      translations: true,
+      categories: { include: { category: true } },
+      media: true,
+      reviews: true,
+    },
+  });
 
   return product;
 };
@@ -124,38 +119,43 @@ const getAllProducts = async (query: QueryParams) => {
   }
 
   // Fetch products with related data
-const data = await prisma.product.findMany({
-  ...prismaQuery,
-  include: {
-    translations: true,
-    media: true,
-    reviews: true,
-    categories: {
-      include: {
-        category: {       // Category details
-          include: {
-            translations: true, // Category translations
+  const data = await prisma.product.findMany({
+    ...prismaQuery,
+    include: {
+      translations: true,
+      media: true,
+      reviews: true,
+      categories: {
+        include: {
+          category: {
+            // Category details
+            include: {
+              translations: true, // Category translations
+            },
           },
         },
       },
     },
-  },
-});
+  });
 
-
-  // Determine current page & limit
-  const page = query.page ? Number(query.page) : 1;
+  // Determine pagination meta
   const limit = query.limit ? Number(query.limit) : 10;
-
-  const hasNextPage = page * limit < total;
+  const page = query.page ? Number(query.page) : 1;
+  const hasNextPage = query.cursor
+    ? data.length === limit
+    : page * limit < (await prisma.product.count({ where: prismaQuery.where }));
 
   return {
     data,
     meta: {
-      total,
-      page,
+      page: query.cursor ? undefined : page,
       limit,
       hasNextPage,
+      nextCursor: query.cursor
+        ? data.length
+          ? data[data.length - 1].id
+          : null
+        : null,
     },
   };
 };
