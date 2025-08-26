@@ -7,7 +7,8 @@ import {
   QueryParams,
 } from "../../utils/builder/PrismaQueryBuilder";
 import { StockLogService } from "../stockLog/stockLog.service";
-import { CreateOrderInput, PaymentStatusType } from "./order.type";
+import { CreateOrderInput } from "./order.type";
+import { OrderStatus, PaymentStatus } from "@prisma/client";
 
 const createOrder = async ({
   userId,
@@ -179,7 +180,9 @@ const getAllOrdersSummary = async (userId: string, query: QueryParams) => {
           },
         },
       },
-      payments: { select: { status: true, method: true, amount: true } },
+      payments: {
+        select: { id: true, status: true, method: true, amount: true },
+      },
       address: { select: { id: true, area: true, city: true } },
     },
     take: prismaQuery.take,
@@ -255,12 +258,10 @@ const getAllOrdersSummary = async (userId: string, query: QueryParams) => {
   };
 };
 
-// Update payment status
-
 const updatePaymentStatus = async (
   userId: string,
   paymentId: string,
-  status: PaymentStatusType
+  status: PaymentStatus
 ) => {
   // ✅ Check if user exists
   await ensureUserExists(userId);
@@ -281,18 +282,106 @@ const updatePaymentStatus = async (
   });
 
   // Optional: Update order status if payment succeeded
-  if (status === "PAID" && payment.orderId) {
+  if (status === PaymentStatus.PAID && payment.orderId) {
     await prisma.order.update({
       where: { id: payment.orderId },
-      data: { status: "CONFIRMED" }, // Assuming CONFIRMED is a valid OrderStatus
+      data: { status: OrderStatus.CONFIRMED },
     });
   }
 
   return updatedPayment;
 };
 
+const cancelOrder = async (userId: string, orderId: string) => {
+  // ✅ Check if user exists
+  await ensureUserExists(userId);
+
+  const order = await prisma.order.findUnique({
+    where: { id: orderId },
+    include: { items: true, payments: true },
+  });
+
+  if (!order) throw new AppError(404, "Order not found");
+
+  // ✅ Check ownership
+  if (order.userId !== userId) throw new AppError(403, "Forbidden");
+
+  // Only allow cancellation for certain statuses
+  if (
+    order.status === OrderStatus.CANCELLED ||
+    order.status === OrderStatus.RETURNED
+  ) {
+    throw new AppError(400, "Order already cancelled or returned");
+  }
+
+  // Determine refund percentage
+  let refundPercent = 100; // full refund
+  if (order.status === OrderStatus.CONFIRMED) refundPercent = 90; // 10% cut
+  if (
+    order.status === OrderStatus.SHIPPED ||
+    order.status === OrderStatus.DELIVERED
+  )
+    refundPercent = 70; // 30% cut
+
+  const refundAmount = Number(order.finalTotal) * (refundPercent / 100);
+
+  // ✅ Transaction-safe cancellation
+  const cancelledOrder = await prisma.$transaction(async (tx) => {
+    // 1️⃣ Update order status
+    const updatedOrder = await tx.order.update({
+      where: { id: orderId },
+      data: { status: OrderStatus.CANCELLED },
+    });
+
+    // 2️⃣ Revert stock
+    for (const item of order.items) {
+      await tx.product.update({
+        where: { id: item.productId },
+        data: { stockQty: { increment: item.quantity } },
+      });
+
+      await tx.stockLog.create({
+        data: {
+          productId: item.productId,
+          quantity: item.quantity,
+          type: "IN",
+          note: `Order ${orderId} cancelled`,
+        },
+      });
+    }
+
+    // 3️⃣ Handle payments
+    for (const payment of order.payments) {
+      if (payment.status === PaymentStatus.PAID) {
+        // Mark as REFUND_PENDING or trigger refund API
+        await tx.payment.update({
+          where: { id: payment.id },
+          data: {
+            status: PaymentStatus.REFUNDED_PENDING,
+            amount: refundAmount,
+          },
+        });
+      } else if (payment.status === PaymentStatus.PENDING) {
+        await tx.payment.update({
+          where: { id: payment.id },
+          data: { status: PaymentStatus.CANCELLED },
+        });
+      }
+    }
+
+    return updatedOrder;
+  });
+
+  return {
+    message: "Order cancelled successfully",
+    refundAmount,
+    refundPercent,
+  };
+};
+
 export const OrderService = {
   createOrder,
   getAllOrdersSummary,
   updatePaymentStatus,
+  cancelOrder,
 };

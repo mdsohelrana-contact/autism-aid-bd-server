@@ -45,6 +45,8 @@ enum PaymentStatus {
   PAID
   FAILED
   REFUNDED
+  CANCELLED
+  REFUNDED_PENDING
 }
 
 // NotificationType

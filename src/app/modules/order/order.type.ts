@@ -6,4 +6,4 @@ export interface CreateOrderInput {
   shippingCharge?: number; // optional
   taxPercent?: number; // optional
 }
-export type PaymentStatusType = "PENDING" | "PAID" | "FAILED";
+

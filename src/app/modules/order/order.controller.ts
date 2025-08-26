@@ -7,7 +7,8 @@ import { parseQueryParams } from "../../utils/builder/parseQueryParams";
 // Create a new order
 const createOrder = catchAsync(async (req, res) => {
   const userId = req!.user!.id;
-  const { addressId, paymentMethod, couponCode, shippingCharge, taxPercent } = req.body;
+  const { addressId, paymentMethod, couponCode, shippingCharge, taxPercent } =
+    req.body;
 
   const order = await OrderService.createOrder({
     userId,
@@ -37,7 +38,7 @@ const getAllOrders = catchAsync(async (req, res) => {
     success: true,
     message: "Orders retrieved successfully",
     meta: orders.meta,
-    data:{
+    data: {
       summary: orders.summary,
       orders: orders.data,
     },
@@ -64,8 +65,24 @@ const updatePaymentStatus = catchAsync(async (req, res) => {
   });
 });
 
+// Cancel an order
+const cancelOrder = catchAsync(async (req, res) => {
+  const userId = req!.user!.id;
+  const { orderId } = req.params;
+
+  const canceledOrder = await OrderService.cancelOrder(userId, orderId);
+  responseHandler({
+    res,
+    statusCode: StatusCodes.OK,
+    success: true,
+    message: "Order canceled successfully",
+    data: canceledOrder,
+  });
+});
+
 export const OrderController = {
   createOrder,
   getAllOrders,
   updatePaymentStatus,
+  cancelOrder,
 };

@@ -1,6 +1,6 @@
 import { Router } from "express";
 import validateRequest from "../../middlewares/validateRequest";
-import { createOrderSchema, } from "./order.schema";
+import { createOrderSchema } from "./order.schema";
 import { OrderController } from "./order.controller";
 import auth from "../../middlewares/auth";
 
@@ -16,9 +16,8 @@ router.post(
 
 router.get("/", OrderController.getAllOrders);
 
-router.patch(
-  "/payment/:paymentId",
-  OrderController.updatePaymentStatus
-);
+router.patch("/payment/:paymentId", OrderController.updatePaymentStatus);
+
+router.delete("/:orderId", OrderController.cancelOrder);
 
 export const orderRoutes = router;
