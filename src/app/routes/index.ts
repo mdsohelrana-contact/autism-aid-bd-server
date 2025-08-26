@@ -7,6 +7,7 @@ import { productRoutes } from "../modules/product/product.routes";
 import { productMediaRoutes } from "../modules/productMedia/productMedia.routes";
 import { categoryRoutes } from "../modules/category/category.routes";
 import { cartRoutes } from "../modules/cart/cart.routes";
+import { orderRoutes } from "../modules/order/order.routes";
 
 const routers = Router();
 
@@ -24,6 +25,7 @@ const moduleRoutes: ModuleRoute[] = [
   { path: "/product-media", route: productMediaRoutes },
   { path: "/categories", route: categoryRoutes },
   { path: "/cart", route: cartRoutes },
+  { path: "/orders", route: orderRoutes },
 ];
 
 moduleRoutes.forEach(({ path, route }) => routers.use(path, route));
