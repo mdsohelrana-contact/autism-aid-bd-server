@@ -153,30 +153,34 @@ const createOrder = async ({
 };
 
 // Get All Orders
-const getAllOrders = async (userId: string, query: QueryParams) => {
+const getAllOrdersSummary = async (userId: string, query: QueryParams) => {
   await ensureUserExists(userId);
 
   const qb = new PrismaQueryBuilder(query).filter().sort().paginate();
   const prismaQuery = qb.build();
 
-  const data = await prisma.order.findMany({
+  const orders = await prisma.order.findMany({
     where: { userId, ...prismaQuery.where },
     include: {
       items: {
         include: {
           product: {
-            include: {
-              translations: true,
-              categories: {
-                include: { category: { include: { translations: true } } },
+            select: {
+              id: true,
+              name: true,
+              translations: { where: { locale: "en" }, select: { name: true } },
+              media: {
+                select: {
+                  url: true,
+                  type: true,
+                },
               },
-              media: true,
             },
           },
         },
       },
-      payments: true,
-      address: true,
+      payments: { select: { status: true, method: true, amount: true } },
+      address: { select: { id: true, area: true, city: true } },
     },
     take: prismaQuery.take,
     skip: prismaQuery.cursorObj ? undefined : prismaQuery.skip,
@@ -185,12 +189,60 @@ const getAllOrders = async (userId: string, query: QueryParams) => {
   });
 
   const limit = query.limit ? Number(query.limit) : 10;
-  const hasNextPage = query.cursor ? data.length === limit : false;
+  const hasNextPage = query.cursor ? orders.length === limit : false;
   const nextCursor =
-    query.cursor && data.length ? data[data.length - 1].id : undefined;
+    query.cursor && orders.length ? orders[orders.length - 1].id : undefined;
+
+  // Map order data + calculate summary
+  let totalItems = 0;
+  let totalSpent = 0;
+  let totalDiscount = 0;
+
+  const data = orders.map((order) => {
+    const subtotal = order.items.reduce(
+      (sum, item) => sum + Number(item.price) * item.quantity,
+      0
+    );
+
+    const discount = order.discount ?? 0;
+    const shipping = order.shippingCharge ?? 0;
+    const tax = order.taxAmount ?? 0;
+    const finalTotal = order.finalTotal;
+
+    totalItems += order.items.reduce((sum, item) => sum + item.quantity, 0);
+    totalSpent += Number(finalTotal);
+    totalDiscount += Number(discount);
+
+    return {
+      id: order.id,
+      status: order.status,
+      isPaid: order.isPaid,
+      createdAt: order.createdAt,
+      subtotal,
+      discount,
+      shipping,
+      tax,
+      total: finalTotal,
+      address: order.address,
+      payments: order.payments,
+      items: order.items.map((item) => ({
+        productId: item.productId,
+        name: item.product.name ?? "",
+        price: item.price,
+        quantity: item.quantity,
+      })),
+    };
+  });
 
   return {
+    summary: {
+      totalOrders: orders.length,
+      totalItems,
+      totalSpent,
+      totalDiscount,
+    },
     data,
+
     meta: {
       page: query.page ?? 1,
       limit,
@@ -241,6 +293,6 @@ const updatePaymentStatus = async (
 
 export const OrderService = {
   createOrder,
-  getAllOrders,
+  getAllOrdersSummary,
   updatePaymentStatus,
 };

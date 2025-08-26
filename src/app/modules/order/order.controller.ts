@@ -30,13 +30,17 @@ const createOrder = catchAsync(async (req, res) => {
 const getAllOrders = catchAsync(async (req, res) => {
   const userId = req!.user!.id;
   const query = parseQueryParams(req);
-  const orders = await OrderService.getAllOrders(userId, query);
+  const orders = await OrderService.getAllOrdersSummary(userId, query);
   responseHandler({
     res,
     statusCode: StatusCodes.OK,
     success: true,
     message: "Orders retrieved successfully",
-    data: orders,
+    meta: orders.meta,
+    data:{
+      summary: orders.summary,
+      orders: orders.data,
+    },
   });
 });
 
