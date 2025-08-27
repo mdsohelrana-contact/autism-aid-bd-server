@@ -314,14 +314,24 @@ const cancelOrder = async (userId: string, orderId: string) => {
     throw new AppError(400, "Order already cancelled or returned");
   }
 
-  // Determine refund percentage
-  let refundPercent = 100; // full refund
-  if (order.status === OrderStatus.CONFIRMED) refundPercent = 90; // 10% cut
-  if (
-    order.status === OrderStatus.SHIPPED ||
-    order.status === OrderStatus.DELIVERED
-  )
-    refundPercent = 70; // 30% cut
+  // Determine refund percentage based on order status
+  let refundPercent = 0;
+  switch (order.status) {
+    case OrderStatus.PENDING:
+      refundPercent = 100;
+      break;
+    case OrderStatus.CONFIRMED:
+      refundPercent = 90;
+      break;
+    case OrderStatus.SHIPPED:
+      refundPercent = 70;
+      break;
+    case OrderStatus.DELIVERED:
+      refundPercent = 50; // optional: or 0
+      break;
+    default:
+      refundPercent = 0;
+  }
 
   const refundAmount = Number(order.finalTotal) * (refundPercent / 100);
 
@@ -331,6 +341,7 @@ const cancelOrder = async (userId: string, orderId: string) => {
     const updatedOrder = await tx.order.update({
       where: { id: orderId },
       data: { status: OrderStatus.CANCELLED },
+      include: { items: true, payments: true },
     });
 
     // 2️⃣ Revert stock
@@ -373,9 +384,14 @@ const cancelOrder = async (userId: string, orderId: string) => {
   });
 
   return {
-    message: "Order cancelled successfully",
-    refundAmount,
-    refundPercent,
+    orderId: cancelledOrder.id,
+    status: OrderStatus.CANCELLED,
+    refund: {
+      refundPercent,
+      refundAmount,
+      deductionReason:
+        refundPercent < 100 ? `Refund cut due to order already ${order.status} ` : "Not applicable",
+    },
   };
 };
 
