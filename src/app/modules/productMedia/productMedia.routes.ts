@@ -1,8 +1,8 @@
 import { Router } from "express";
-import * as ProductMediaController from "./productMedia.controller";
 import upload from "../../utils/cloudinary/multer";
 import auth from "../../middlewares/auth";
 import { uploadAndParse } from "../../utils/cloudinary/uploadAndParse";
+import { MediaController } from "./productMedia.controller";
 
 const router = Router();
 
@@ -11,11 +11,11 @@ router.post(
   auth(),
   upload.single("file"),
   uploadAndParse("products", "url"), // 👈 here
-  ProductMediaController.createMedia
+  MediaController.createMedia
 );
 
-router.get("/:productId", ProductMediaController.getMediaByProduct);
+router.get("/:productId", MediaController.getMediaByProduct);
 
-router.delete("/:id", ProductMediaController.deleteMedia);
+router.delete("/:id", MediaController.deleteMedia);
 
 export const productMediaRoutes = router;

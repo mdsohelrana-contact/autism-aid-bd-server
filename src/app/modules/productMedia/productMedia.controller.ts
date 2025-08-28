@@ -5,7 +5,7 @@ import { StatusCodes } from "http-status-codes";
 import { ProductMediaService } from "./productMedia.service";
 
 // Create media
-export const createMedia = catchAsync(async (req: Request, res: Response) => {
+ const createMedia = catchAsync(async (req: Request, res: Response) => {
   const userId = req!.user!.id;
 
   const media = await ProductMediaService.createProductMedia(userId, req.body);
@@ -21,7 +21,7 @@ export const createMedia = catchAsync(async (req: Request, res: Response) => {
 });
 
 // Get media by product
-export const getMediaByProduct = catchAsync(
+ const getMediaByProduct = catchAsync(
   async (req: Request, res: Response) => {
     const { productId } = req.params;
     const media = await ProductMediaService.getProductMediaByProduct(productId);
@@ -38,7 +38,7 @@ export const getMediaByProduct = catchAsync(
 );
 
 // Delete media
-export const deleteMedia = catchAsync(async (req: Request, res: Response) => {
+ const deleteMedia = catchAsync(async (req: Request, res: Response) => {
   const userId = req!.user!.id;
   const { id } = req.params;
   await ProductMediaService.deleteProductMedia(userId, id);
@@ -52,3 +52,9 @@ export const deleteMedia = catchAsync(async (req: Request, res: Response) => {
     data: null,
   });
 });
+
+export const MediaController = {
+  createMedia,
+  getMediaByProduct,
+  deleteMedia,
+};
