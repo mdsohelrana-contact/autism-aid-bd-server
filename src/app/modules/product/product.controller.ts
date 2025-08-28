@@ -31,7 +31,7 @@ const getAllProducts = catchAsync(async (req, res) => {
     success: true,
     message: "Product fetched successfully",
     meta: result.meta,
-    data: result,
+    data: result.data,
   });
 });
 

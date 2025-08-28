@@ -3,6 +3,7 @@ import app from "./app";
 import { Server as SocketIOServer } from "socket.io";
 import config from "./config/index";
 import { socketAuth } from "./middlewares/socketAuth";
+import "./utils/coupon/expireCoupons";
 
 const httpServer = createServer(app);
 

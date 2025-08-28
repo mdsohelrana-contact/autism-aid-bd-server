@@ -125,6 +125,7 @@ const getAllProducts = async (query: QueryParams) => {
       translations: true,
       media: true,
       reviews: true,
+      stockLogs: true,
       categories: {
         include: {
           category: {

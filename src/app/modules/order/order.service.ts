@@ -21,6 +21,8 @@ const createOrder = async ({
 }: CreateOrderInput) => {
   await ensureUserExists(userId);
 
+  console.log(couponCode,"Coupon code")
+
   const cart = await prisma.cart.findUnique({
     where: { userId },
     include: {
@@ -36,6 +38,7 @@ const createOrder = async ({
       },
     },
   });
+
   if (!cart || cart.items.length === 0)
     throw new AppError(StatusCodes.BAD_REQUEST, "Cart is empty");
 
@@ -93,20 +96,20 @@ const createOrder = async ({
         addressId,
         cartId: cart.id,
         couponId: couponApplied?.id,
-        total,
-        discount,
-        finalTotal,
+        total : Number(total),
+        discount: Number(discount),
+        finalTotal : Number(finalTotal),
         isPaid: paymentMethod !== "COD",
         items: {
           create: cart.items.map((item) => ({
             productId: item.productId,
-            quantity: item.quantity,
-            price: item.product!.price,
+            quantity: Number(item.quantity),
+            price: Number(item.product!.price),
           })),
         },
         payments: { create: { amount: finalTotal, method: paymentMethod } },
-        shippingCharge,
-        taxAmount,
+        shippingCharge: Number(shippingCharge),
+        taxAmount : Number(taxAmount),
       },
       include: { items: true, payments: true },
     });
