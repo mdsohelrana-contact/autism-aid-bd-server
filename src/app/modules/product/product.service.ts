@@ -43,7 +43,7 @@ interface CreateProductInput {
   translations: TranslationInput[];
 }
 
-export const createProduct = async (userId: string, data: any) => {
+ const createProduct = async (userId: string, data: any) => {
   if (!userId) throw new AppError(StatusCodes.BAD_REQUEST, "User ID missing");
 
   await ensureUserExists(userId);

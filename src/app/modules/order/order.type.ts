@@ -1,9 +1,8 @@
 export interface CreateOrderInput {
   userId: string;
-  addressId?: string;
-  paymentMethod?: string;
+  addressId: string;
+  paymentMethod?: "BKASH" | "COD" | "CARD";
   couponCode?: string;
-  shippingCharge?: number; // optional
-  taxPercent?: number; // optional
+  shippingCharge?: number;
+  taxPercent?: number;
 }
-

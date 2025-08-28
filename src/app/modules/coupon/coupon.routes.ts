@@ -1,16 +1,21 @@
 import { Router } from "express";
-import { couponController } from "./coupon.controller";
+import auth from "../../middlewares/auth";
+import validateRequest from "../../middlewares/validateRequest";
+import { createCouponSchema } from "./coupon.schema";
+import { CouponController } from "./coupon.controller";
 
 const router = Router();
 
-router.post("/", couponController.createCoupon);
+router.use(auth())
 
-router.get("/", couponController.getCoupons);
+router.post("/", validateRequest(createCouponSchema),CouponController.createCoupon);
 
-router.get("/:id", couponController.getCouponById);
+router.get("/", CouponController.getCoupons);
 
-router.put("/:id", couponController.updateCoupon);
+router.get("/:id", CouponController.getCouponById);
 
-router.delete("/:id", couponController.deleteCoupon);
+router.put("/:id", CouponController.updateCoupon);
+
+router.delete("/:id", CouponController.deleteCoupon);
 
 export const couponRoutes = router;

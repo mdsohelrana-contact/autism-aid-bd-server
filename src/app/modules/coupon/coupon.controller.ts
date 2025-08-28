@@ -2,6 +2,7 @@ import { StatusCodes } from "http-status-codes";
 import catchAsync from "../../utils/catchAsync";
 import responseHandler from "../../utils/responseHandler";
 import { CouponService } from "./coupon.service";
+import { parseQueryParams } from "../../utils/builder/parseQueryParams";
 
 // Create coupon
 const createCoupon = catchAsync(async (req, res) => {
@@ -22,8 +23,9 @@ const createCoupon = catchAsync(async (req, res) => {
 // Get all coupons
 const getCoupons = catchAsync(async (req, res) => {
   const userId = req!.user!.id;
+    const query = parseQueryParams(req);
 
-  const coupons = await CouponService.getCoupons(userId);
+  const coupons = await CouponService.getCoupons(userId, query);
 
   responseHandler({
     res,
@@ -72,17 +74,17 @@ const deleteCoupon = catchAsync(async (req, res) => {
   const userId = req!.user!.id;
   const couponId = req.params.id;
 
-  await CouponService.deleteCouponById(userId, couponId);
+  const result = await CouponService.deleteCouponById(userId, couponId);
 
   responseHandler({
     res,
-    statusCode: StatusCodes.NO_CONTENT,
+    statusCode: StatusCodes.OK,
     success: true,
     message: "Coupon deleted successfully",
   });
 });
 
-export const couponController = {
+export const CouponController = {
   createCoupon,
   getCoupons,
   getCouponById,
