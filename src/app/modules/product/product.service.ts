@@ -17,33 +17,8 @@ interface TranslationInput {
   slug: string;
   description?: string;
 }
-
-interface CreateProductInput {
-  name: string;
-  sku?: string;
-  description: string;
-  benefits: string;
-  brand?: string | null;
-  status?: "ACTIVE" | "INACTIVE";
-  currency?: string;
-  basePrice?: number;
-  price?: number;
-  discountPrice?: number;
-  stockQty?: number;
-  lowStockThreshold?: number;
-  isNew?: boolean;
-  isTrending?: boolean;
-  deliveryDaysMin?: number | null;
-  deliveryDaysMax?: number | null;
-  ageMin?: number | null;
-  ageMax?: number | null;
-  specs?: any;
-  tags?: string[];
-  categoryIds: string[];
-  translations: TranslationInput[];
-}
-
- const createProduct = async (userId: string, data: any) => {
+// Create a new product           
+const createProduct = async (userId: string, data: any) => {
   if (!userId) throw new AppError(StatusCodes.BAD_REQUEST, "User ID missing");
 
   await ensureUserExists(userId);
@@ -171,6 +146,18 @@ const getProductById = async (id: string) => {
       media: true,
       categories: true,
       reviews: true,
+      stockLogs: {
+        orderBy: { createdAt: "desc" },
+        include: {
+          product: {
+            select: {
+              id: true,
+              name: true,
+              media: true,
+            },
+          },
+        },
+      },
     },
   });
 

@@ -14,7 +14,7 @@ router.post(
   ReviewController.createReview
 );
 
-router.get("/product/:productId", ReviewController.getReviewsByProduct);
+
 
 router.put(
   "/:id",

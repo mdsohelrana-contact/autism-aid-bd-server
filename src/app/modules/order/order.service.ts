@@ -174,7 +174,10 @@ const getAllOrdersSummary = async (userId: string, query: QueryParams) => {
               select: {
                 id: true,
                 name: true,
-                translations: { where: { locale: "en" }, select: { name: true } },
+                translations: {
+                  where: { locale: "en" },
+                  select: { name: true },
+                },
                 media: { select: { url: true, type: true } },
               },
             },
@@ -194,7 +197,8 @@ const getAllOrdersSummary = async (userId: string, query: QueryParams) => {
     // Pagination & Cursor
     const limit = query.limit ? Number(query.limit) : 10;
     const hasNextPage = query.cursor ? orders.length === limit : false;
-    const nextCursor = query.cursor && orders.length ? orders[orders.length - 1].id : undefined;
+    const nextCursor =
+      query.cursor && orders.length ? orders[orders.length - 1].id : undefined;
 
     // Map Orders & Calculate Summary
     let totalItems = 0;
@@ -202,7 +206,10 @@ const getAllOrdersSummary = async (userId: string, query: QueryParams) => {
     let totalDiscount = 0;
 
     const data = orders.map((order) => {
-      const subtotal = order.items.reduce((sum, item) => sum + Number(item.price) * item.quantity, 0);
+      const subtotal = order.items.reduce(
+        (sum, item) => sum + Number(item.price) * item.quantity,
+        0
+      );
       const discount = order.discount ?? 0;
       const shipping = order.shippingCharge ?? 0;
       const tax = order.taxAmount ?? 0;

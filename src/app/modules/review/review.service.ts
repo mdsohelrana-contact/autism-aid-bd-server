@@ -78,23 +78,6 @@ const createReview = async (
   });
 };
 
-const getReviewsByProduct = async (productId: string, page = 1, limit = 10) => {
-  const skip = (page - 1) * limit;
-
-  const reviews = await prisma.review.findMany({
-    where: { productId, isDeleted: false },
-    include: { user: { select: { id: true, name: true } } },
-    skip,
-    take: limit,
-    orderBy: { createdAt: "desc" },
-  });
-
-  const total = await prisma.review.count({
-    where: { productId, isDeleted: false },
-  });
-
-  return { reviews, total, page, limit };
-};
 
 const updateReview = async (
   userId: string,
@@ -142,7 +125,7 @@ const updateReview = async (
 
 const deleteReview = async (userId: string, reviewId: string) => {
   return prisma.$transaction(async (tx) => {
-    const review = await tx.review.findUnique({ where: { id: reviewId } });
+    const review = await tx.review.findUnique({ where: { id: reviewId, isDeleted: false } });
     if (!review || review.userId !== userId)
       throw new AppError(StatusCodes.NOT_FOUND, "Review not found");
 
@@ -183,7 +166,6 @@ const deleteReview = async (userId: string, reviewId: string) => {
 
 export const ReviewService = {
   createReview,
-  getReviewsByProduct,
   updateReview,
   deleteReview,
 };

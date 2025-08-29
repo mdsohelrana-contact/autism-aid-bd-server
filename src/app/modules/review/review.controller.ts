@@ -18,21 +18,6 @@ const createReview = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
-const getReviewsByProduct = catchAsync(async (req: Request, res: Response) => {
-  const { productId } = req.params;
-  const { page, limit } = req.query;
-
-  const result = await ReviewService.getReviewsByProduct(productId, Number(page) || 1, Number(limit) || 10);
-
-  responseHandler({
-    res,
-    req,
-    statusCode: StatusCodes.OK,
-    success: true,
-    message: "Reviews fetched successfully",
-    data: result,
-  });
-});
 
 const updateReview = catchAsync(async (req: Request, res: Response) => {
   const userId = req!.user!.id;
@@ -59,7 +44,7 @@ const deleteReview = catchAsync(async (req: Request, res: Response) => {
   responseHandler({
     res,
     req,
-    statusCode: StatusCodes.NO_CONTENT,
+    statusCode: StatusCodes.OK,
     success: true,
     message: "Review deleted successfully",
     data: null,
@@ -68,7 +53,6 @@ const deleteReview = catchAsync(async (req: Request, res: Response) => {
 
 export const ReviewController = {
   createReview,
-  getReviewsByProduct,
   updateReview,
   deleteReview,
 };
