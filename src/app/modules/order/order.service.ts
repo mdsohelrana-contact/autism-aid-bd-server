@@ -7,7 +7,7 @@ import {
   QueryParams,
 } from "../../utils/builder/PrismaQueryBuilder";
 import { StockLogService } from "../stockLog/stockLog.service";
-import { CreateOrderInput } from "./order.type";
+import { ALLOWED_STATUS_TRANSITIONS, CreateOrderInput } from "./order.type";
 import { OrderStatus, PaymentStatus } from "@prisma/client";
 import { applyCoupon } from "../../utils/coupon/applyCoupon";
 
@@ -19,10 +19,10 @@ const createOrder = async ({
   shippingCharge = 0,
   taxPercent = 0,
 }: CreateOrderInput) => {
+  // ✅ Ensure user exists
   await ensureUserExists(userId);
 
-  console.log(couponCode,"Coupon code")
-
+  // ✅ Load cart with products
   const cart = await prisma.cart.findUnique({
     where: { userId },
     include: {
@@ -31,7 +31,7 @@ const createOrder = async ({
           product: {
             include: {
               categories: true,
-              CouponProduct: true,
+              couponProduct: true,
             },
           },
         },
@@ -39,22 +39,28 @@ const createOrder = async ({
     },
   });
 
-  if (!cart || cart.items.length === 0)
+  if (!cart || cart.items.length === 0) {
     throw new AppError(StatusCodes.BAD_REQUEST, "Cart is empty");
+  }
 
-  if (!addressId)
+  // ✅ Check address
+  if (!addressId) {
     throw new AppError(StatusCodes.BAD_REQUEST, "Address is required");
+  }
   const address = await prisma.address.findUnique({ where: { id: addressId } });
-  if (!address) throw new AppError(StatusCodes.NOT_FOUND, "Address not found");
+  if (!address) {
+    throw new AppError(StatusCodes.NOT_FOUND, "Address not found");
+  }
 
-  // Calculate total & prepare cartItems for coupon
+  // ✅ Calculate cart total
   let total = 0;
   const cartItemsForCoupon = cart.items.map((item) => {
-    if (!item.product)
+    if (!item.product) {
       throw new AppError(
         StatusCodes.NOT_FOUND,
         `Product ${item.productId} not found`
       );
+    }
     const price = item.product.discountPrice ?? item.product.price;
     total += Number(price) * item.quantity;
     return {
@@ -68,8 +74,9 @@ const createOrder = async ({
   let discount = 0;
   let couponApplied: any = null;
 
+  // ✅ Transaction for order
   const order = await prisma.$transaction(async (tx) => {
-    // Apply coupon inside transaction
+    // 🎟️ Apply coupon if provided
     if (couponCode) {
       const result = await applyCoupon({
         couponCode,
@@ -80,7 +87,7 @@ const createOrder = async ({
       discount = result.discount;
       couponApplied = result.coupon;
 
-      // ✅ Transaction-safe usage increment
+      // Update coupon usage
       await tx.coupon.update({
         where: { id: couponApplied.id },
         data: { usedCount: { increment: 1 } },
@@ -90,31 +97,35 @@ const createOrder = async ({
     const taxAmount = (total - discount) * (taxPercent / 100);
     const finalTotal = total - discount + shippingCharge + taxAmount;
 
+    // ✅ Create order first (without items)
     const newOrder = await tx.order.create({
       data: {
         userId,
         addressId,
         cartId: cart.id,
         couponId: couponApplied?.id,
-        total : Number(total),
+        total: Number(total),
         discount: Number(discount),
-        finalTotal : Number(finalTotal),
+        finalTotal: Number(finalTotal),
         isPaid: paymentMethod !== "COD",
-        items: {
-          create: cart.items.map((item) => ({
-            productId: item.productId,
-            quantity: Number(item.quantity),
-            price: Number(item.product!.price),
-          })),
-        },
-        payments: { create: { amount: finalTotal, method: paymentMethod } },
         shippingCharge: Number(shippingCharge),
-        taxAmount : Number(taxAmount),
+        taxAmount: Number(taxAmount),
+        payments: { create: { amount: finalTotal, method: paymentMethod } },
       },
-      include: { items: true, payments: true },
+      include: { payments: true },
     });
 
-    // Update stock & log
+    // Add order items separately
+    await tx.orderItem.createMany({
+      data: cart.items.map((item) => ({
+        orderId: newOrder.id,
+        productId: item.productId,
+        quantity: Number(item.quantity),
+        price: Number(item.product!.discountPrice ?? item.product!.price),
+      })),
+    });
+
+    // ✅ Update stock & log
     for (const item of cart.items) {
       await StockLogService.createStockLog({
         productId: item.productId,
@@ -122,15 +133,21 @@ const createOrder = async ({
         type: "OUT",
         note: `Order ${newOrder.id} placed`,
       });
+
       await tx.product.update({
         where: { id: item.productId },
         data: { stockQty: { decrement: item.quantity } },
       });
     }
 
+    // ✅ Clear cart
     await tx.cartItem.deleteMany({ where: { cartId: cart.id } });
 
-    return newOrder;
+    // Return order with items
+    return tx.order.findUnique({
+      where: { id: newOrder.id },
+      include: { items: true, payments: true },
+    });
   });
 
   return order;
@@ -139,142 +156,172 @@ const createOrder = async ({
 // Get All Orders
 const getAllOrdersSummary = async (userId: string, query: QueryParams) => {
   await ensureUserExists(userId);
+  try {
+    // Dynamic Query Builder
+    const qb = new PrismaQueryBuilder(query).filter().sort().paginate();
+    const prismaQuery = qb.build();
 
-  const qb = new PrismaQueryBuilder(query).filter().sort().paginate();
-  const prismaQuery = qb.build();
-
-  const orders = await prisma.order.findMany({
-    where: { userId, ...prismaQuery.where },
-    include: {
-      items: {
-        include: {
-          product: {
-            select: {
-              id: true,
-              name: true,
-              translations: { where: { locale: "en" }, select: { name: true } },
-              media: {
-                select: {
-                  url: true,
-                  type: true,
-                },
+    // Fetch Orders
+    const orders = await prisma.order.findMany({
+      where: {
+        userId,
+        ...prismaQuery.where,
+      },
+      include: {
+        items: {
+          include: {
+            product: {
+              select: {
+                id: true,
+                name: true,
+                translations: { where: { locale: "en" }, select: { name: true } },
+                media: { select: { url: true, type: true } },
               },
             },
           },
         },
+        payments: {
+          select: { id: true, status: true, method: true, amount: true },
+        },
+        address: { select: { id: true, area: true, city: true } },
       },
-      payments: {
-        select: { id: true, status: true, method: true, amount: true },
-      },
-      address: { select: { id: true, area: true, city: true } },
-    },
-    take: prismaQuery.take,
-    skip: prismaQuery.cursorObj ? undefined : prismaQuery.skip,
-    cursor: prismaQuery.cursorObj,
-    orderBy: prismaQuery.orderBy,
-  });
+      take: prismaQuery.take,
+      skip: prismaQuery.cursorObj ? undefined : prismaQuery.skip,
+      cursor: prismaQuery.cursorObj,
+      orderBy: prismaQuery.orderBy,
+    });
 
-  const limit = query.limit ? Number(query.limit) : 10;
-  const hasNextPage = query.cursor ? orders.length === limit : false;
-  const nextCursor =
-    query.cursor && orders.length ? orders[orders.length - 1].id : undefined;
+    // Pagination & Cursor
+    const limit = query.limit ? Number(query.limit) : 10;
+    const hasNextPage = query.cursor ? orders.length === limit : false;
+    const nextCursor = query.cursor && orders.length ? orders[orders.length - 1].id : undefined;
 
-  // Map order data + calculate summary
-  let totalItems = 0;
-  let totalSpent = 0;
-  let totalDiscount = 0;
+    // Map Orders & Calculate Summary
+    let totalItems = 0;
+    let totalSpent = 0;
+    let totalDiscount = 0;
 
-  const data = orders.map((order) => {
-    const subtotal = order.items.reduce(
-      (sum, item) => sum + Number(item.price) * item.quantity,
-      0
-    );
+    const data = orders.map((order) => {
+      const subtotal = order.items.reduce((sum, item) => sum + Number(item.price) * item.quantity, 0);
+      const discount = order.discount ?? 0;
+      const shipping = order.shippingCharge ?? 0;
+      const tax = order.taxAmount ?? 0;
+      const finalTotal = order.finalTotal;
 
-    const discount = order.discount ?? 0;
-    const shipping = order.shippingCharge ?? 0;
-    const tax = order.taxAmount ?? 0;
-    const finalTotal = order.finalTotal;
+      totalItems += order.items.reduce((sum, item) => sum + item.quantity, 0);
+      totalSpent += Number(finalTotal);
+      totalDiscount += Number(discount);
 
-    totalItems += order.items.reduce((sum, item) => sum + item.quantity, 0);
-    totalSpent += Number(finalTotal);
-    totalDiscount += Number(discount);
+      return {
+        id: order.id,
+        status: order.status,
+        isPaid: order.isPaid,
+        createdAt: order.createdAt,
+        subtotal,
+        discount,
+        shipping,
+        tax,
+        total: finalTotal,
+        address: order.address,
+        payments: order.payments,
+        items: order.items.map((item) => ({
+          productId: item.productId,
+          name: item.product.name ?? "",
+          price: item.price,
+          quantity: item.quantity,
+        })),
+      };
+    });
 
+    // Total Count for Pagination
+    const totalCount = query.cursor
+      ? undefined
+      : await prisma.order.count({ where: { userId, ...prismaQuery.where } });
+
+    // Return Professional Response
     return {
-      id: order.id,
-      status: order.status,
-      isPaid: order.isPaid,
-      createdAt: order.createdAt,
-      subtotal,
-      discount,
-      shipping,
-      tax,
-      total: finalTotal,
-      address: order.address,
-      payments: order.payments,
-      items: order.items.map((item) => ({
-        productId: item.productId,
-        name: item.product.name ?? "",
-        price: item.price,
-        quantity: item.quantity,
-      })),
+      success: true,
+      message: "Orders fetched successfully",
+      summary: {
+        totalOrders: orders.length,
+        totalItems,
+        totalSpent,
+        totalDiscount,
+      },
+      data,
+      meta: {
+        page: query.page ?? 1,
+        limit,
+        hasNextPage,
+        nextCursor,
+        total: totalCount,
+      },
     };
-  });
-
-  return {
-    summary: {
-      totalOrders: orders.length,
-      totalItems,
-      totalSpent,
-      totalDiscount,
-    },
-    data,
-
-    meta: {
-      page: query.page ?? 1,
-      limit,
-      hasNextPage,
-      nextCursor,
-      total: query.cursor
-        ? undefined
-        : await prisma.order.count({ where: { userId, ...prismaQuery.where } }),
-    },
-  };
+  } catch (err: any) {
+    console.error(err);
+    throw new AppError(
+      StatusCodes.BAD_REQUEST,
+      "Failed to fetch orders. Please check your query parameters."
+    );
+  }
 };
-
-const updatePaymentStatus = async (
+const updateOrderStatus = async (
   userId: string,
-  paymentId: string,
-  status: PaymentStatus
+  orderId: string,
+  newStatus: OrderStatus
 ) => {
-  // ✅ Check if user exists
+  // ✅ Ensure user exists
   await ensureUserExists(userId);
 
-  const payment = await prisma.payment.findUnique({
-    where: { id: paymentId },
-    include: { order: true },
-  });
-
-  if (!payment) {
-    throw new AppError(StatusCodes.NOT_FOUND, "Payment not found");
-  }
-
-  const updatedPayment = await prisma.payment.update({
-    where: { id: paymentId },
-    data: { status },
-    include: { order: true },
-  });
-
-  // Optional: Update order status if payment succeeded
-  if (status === PaymentStatus.PAID && payment.orderId) {
-    await prisma.order.update({
-      where: { id: payment.orderId },
-      data: { status: OrderStatus.CONFIRMED },
+  // ✅ Transaction-safe update
+  const updatedOrder = await prisma.$transaction(async (tx) => {
+    // Fetch order with payments
+    const order = await tx.order.findUnique({
+      where: { id: orderId },
+      include: { payments: true },
     });
-  }
 
-  return updatedPayment;
+    if (!order) {
+      throw new AppError(StatusCodes.NOT_FOUND, "Order not found");
+    }
+
+    // ✅ Check if newStatus is valid transition
+    const allowedNextStatuses = ALLOWED_STATUS_TRANSITIONS[order.status];
+    if (!allowedNextStatuses.includes(newStatus)) {
+      throw new AppError(
+        StatusCodes.BAD_REQUEST,
+        `Cannot change order status from ${order.status} to ${newStatus}`
+      );
+    }
+
+    // ✅ Payment check: prevent SHIPPED/DELIVERED if payment not completed
+    const hasIncompletePayment = order.payments.some(
+      (p) => p.status !== PaymentStatus.PAID
+    );
+
+    const isShippedOrDelivered =
+      newStatus === OrderStatus.SHIPPED || newStatus === OrderStatus.DELIVERED;
+
+    if (hasIncompletePayment && isShippedOrDelivered) {
+      throw new AppError(
+        StatusCodes.BAD_REQUEST,
+        "Cannot move to SHIPPED or DELIVERED while payment is not completed"
+      );
+    }
+
+    // ✅ Update order status
+    const updated = await tx.order.update({
+      where: { id: orderId },
+      data: { status: newStatus },
+    });
+
+    return updated;
+  });
+
+  return updatedOrder;
 };
 
+//
 const cancelOrder = async (userId: string, orderId: string) => {
   // ✅ Check if user exists
   await ensureUserExists(userId);
@@ -383,6 +430,6 @@ const cancelOrder = async (userId: string, orderId: string) => {
 export const OrderService = {
   createOrder,
   getAllOrdersSummary,
-  updatePaymentStatus,
+  updateOrderStatus,
   cancelOrder,
 };

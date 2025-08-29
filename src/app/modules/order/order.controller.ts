@@ -45,15 +45,15 @@ const getAllOrders = catchAsync(async (req, res) => {
   });
 });
 
-// Update payment status
-const updatePaymentStatus = catchAsync(async (req, res) => {
+// Update order status
+const updateOrderStatus = catchAsync(async (req, res) => {
   const userId = req!.user!.id;
-  const { paymentId } = req.params;
+  const { orderId } = req.params;
   const { status } = req.body;
 
-  const updatedOrder = await OrderService.updatePaymentStatus(
+  const updatedOrder = await OrderService.updateOrderStatus(
     userId,
-    paymentId,
+    orderId,
     status
   );
   responseHandler({
@@ -83,6 +83,6 @@ const cancelOrder = catchAsync(async (req, res) => {
 export const OrderController = {
   createOrder,
   getAllOrders,
-  updatePaymentStatus,
+  updateOrderStatus,
   cancelOrder,
 };

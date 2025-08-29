@@ -1,3 +1,5 @@
+import { OrderStatus } from "@prisma/client";
+
 export interface CreateOrderInput {
   userId: string;
   addressId: string;
@@ -6,3 +8,12 @@ export interface CreateOrderInput {
   shippingCharge?: number;
   taxPercent?: number;
 }
+
+export const ALLOWED_STATUS_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
+  PENDING: [OrderStatus.CONFIRMED, OrderStatus.CANCELLED],
+  CONFIRMED: [OrderStatus.SHIPPED, OrderStatus.CANCELLED],
+  SHIPPED: [OrderStatus.DELIVERED, OrderStatus.RETURNED],
+  DELIVERED: [],
+  CANCELLED: [],
+  RETURNED: [],
+};

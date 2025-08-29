@@ -16,7 +16,7 @@ router.post(
 
 router.get("/", OrderController.getAllOrders);
 
-router.patch("/payment/:paymentId", OrderController.updatePaymentStatus);
+router.patch("/:orderId", OrderController.updateOrderStatus);
 
 router.delete("/:orderId", OrderController.cancelOrder);
 

@@ -8,8 +8,11 @@ const router = Router();
 router.use(auth());
 
 router.get("/", PaymentController.getAllPayments);
+
 router.post("/item", PaymentController.createManualPayment);
+
 router.put("/:paymentId", PaymentController.updatePaymentStatusById);
+
 router.get("/:paymentId", PaymentController.getPaymentById);
 
 export const paymentRoutes = router;

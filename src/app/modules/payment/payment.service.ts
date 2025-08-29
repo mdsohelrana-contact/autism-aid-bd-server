@@ -6,7 +6,7 @@ import {
 } from "../../utils/builder/PrismaQueryBuilder";
 import prisma from "../../utils/prisma";
 import { ensureUserExists } from "../../utils/user/ensureUserExists ";
-import { Payment, PaymentStatus } from "@prisma/client";
+import { OrderStatus, Payment, PaymentStatus } from "@prisma/client";
 
 // Get all payments
 const getAllPayments = async (userId: string, query: QueryParams) => {
@@ -55,11 +55,12 @@ const updatePaymentStatusById = async (
   paymentId: string,
   data: Partial<Payment>
 ) => {
-  // Check user exist
+  // ✅ Check if user exists
   await ensureUserExists(userId);
 
   const payment = await prisma.payment.findUnique({
     where: { id: paymentId },
+    include: { order: true },
   });
 
   if (!payment) {
@@ -68,8 +69,23 @@ const updatePaymentStatusById = async (
 
   const updatedPayment = await prisma.payment.update({
     where: { id: paymentId },
-    data,
+    data: {
+      ...data,
+    },
+    include: { order: true },
   });
+
+  // Optional: Update order status if payment succeeded
+  if (
+    data.status === PaymentStatus.PAID &&
+    updatedPayment.orderId &&
+    updatedPayment.order?.status !== OrderStatus.CONFIRMED
+  ) {
+    await prisma.order.update({
+      where: { id: updatedPayment.orderId },
+      data: { status: OrderStatus.CONFIRMED },
+    });
+  }
 
   return updatedPayment;
 };

@@ -140,6 +140,9 @@ model Product {
   ageMin      Int?
   ageMax      Int?
 
+  averageRating Float @default(0)
+  reviewCount   Int   @default(0)
+
   basePrice     Decimal  @default(0) @db.Decimal(12, 2)
   price         Decimal  @default(0) @db.Decimal(12, 2)
   discountPrice Decimal? @db.Decimal(12, 2)
@@ -170,8 +173,8 @@ model Product {
   orderItems    OrderItem[]
   reviews       Review[]
   stockLogs     StockLog[]
-  CartItem      CartItem[]
-  CouponProduct CouponProduct[]
+  cartItem      CartItem[]
+  couponProduct CouponProduct[]
 
   @@index([status, createdAt])
   @@index([price])
@@ -320,7 +323,7 @@ model Order {
   cart    Cart?    @relation(fields: [cartId], references: [id], onDelete: SetNull)
   address Address? @relation(fields: [addressId], references: [id], onDelete: SetNull)
 
-  coupon   Coupon?     @relation(fields: [couponId], references: [id], onDelete: SetNull) 
+  coupon   Coupon?     @relation(fields: [couponId], references: [id], onDelete: SetNull)
   items    OrderItem[]
   payments Payment[]
 
@@ -371,8 +374,8 @@ model Review {
   productId String
   rating    Int     @default(5)
   comment   String?
-   isDeleted Boolean  @default(false)   
-   
+  isDeleted Boolean @default(false)
+
   createdAt DateTime @default(now())
 
   user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -455,6 +458,24 @@ model CouponCategory {
   @@map("coupon_categories")
 }
 
+// OFFER BANNER
+model OfferBanner {
+  id       String  @id @default(cuid())
+  slug     String  @unique
+  title    String
+  subtitle String?
+  imageUrl String?
+  linkUrl  String?
+  seoTitle String?
+  seoDesc  String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("offer_banners")
+}
+
+
 //  BLOG 
 model BlogPost {
   id     String     @id @default(cuid())
@@ -489,22 +510,6 @@ model BlogPostTranslation {
   @@map("blog_post_translations")
 }
 
-// OFFER BANNER
-model OfferBanner {
-  id       String  @id @default(cuid())
-  slug     String  @unique
-  title    String
-  subtitle String?
-  imageUrl String?
-  linkUrl  String?
-  seoTitle String?
-  seoDesc  String?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@map("offer_banners")
-}
 
 model Notification {
   id        String           @id @default(cuid())
