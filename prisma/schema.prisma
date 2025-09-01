@@ -120,6 +120,7 @@ model User {
   productMedia       ProductMedia[]
   coupon             Coupon[]
   offerBanner        OfferBanner[]
+  AIRecommendation   AIRecommendation[]
 
   @@map("users")
 }
@@ -162,6 +163,9 @@ model Product {
   ageMin      Int?
   ageMax      Int?
 
+  // Store vector/embedding
+  embedding Json?
+
   averageRating Float @default(0)
   reviewCount   Int   @default(0)
 
@@ -189,14 +193,15 @@ model Product {
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  translations  ProductTranslation[]
-  media         ProductMedia[]
-  categories    ProductOnCategory[]
-  orderItems    OrderItem[]
-  reviews       Review[]
-  stockLogs     StockLog[]
-  cartItem      CartItem[]
-  couponProduct CouponProduct[]
+  translations            ProductTranslation[]
+  media                   ProductMedia[]
+  categories              ProductOnCategory[]
+  orderItems              OrderItem[]
+  reviews                 Review[]
+  stockLogs               StockLog[]
+  cartItem                CartItem[]
+  couponProduct           CouponProduct[]
+  AIRecommendationProduct AIRecommendationProduct[]
 
   @@index([status, createdAt])
   @@index([price])
@@ -518,6 +523,45 @@ model OfferBanner {
   @@index([priority])
   @@index([targetPage, deviceType])
   @@map("offer_banners")
+}
+
+// AI Recommendation
+model AIRecommendation {
+  id      String  @id @default(cuid())
+  userId  String?
+  symptom String
+  context Json?
+  source  String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  user     User?                     @relation(fields: [userId], references: [id])
+  products AIRecommendationProduct[]
+
+  @@index([symptom])
+  @@map("ai_recommendations")
+}
+
+// AI Recommendation Products
+model AIRecommendationProduct {
+  id               String @id @default(cuid())
+  productId        String
+  recommendationId String
+
+  product        Product          @relation(fields: [productId], references: [id], onDelete: Cascade)
+  recommendation AIRecommendation @relation(fields: [recommendationId], references: [id], onDelete: Cascade)
+
+  relevanceScore Float @default(0)
+  matchedFields  Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([productId, recommendationId])
+  @@index([relevanceScore])
+  @@map("ai_recommendation_products")
 }
 
 //  BLOG 

@@ -1,114 +1,150 @@
-# 📘 Autism-AID BD Backend
+# 🛒 E-Commerce + AI Recommendation System  
+Built with **Prisma + PostgreSQL**  
 
-Advanced-level **E-commerce Backend** for Bangladesh-based Rehab Equipment Platform.  
-Built with **Express.js + TypeScript + Prisma ORM + PostgreSQL**.  
-Supports **Multi-language (Bangla/English)**, **Payment Integrations (SSLCommerz, bKash, Nagad)**, **SEO-friendly Models**, and **Assistive Features**.
-
----
-
-## 🚀 Tech Stack
-
-- **Node.js** + **Express.js** – Backend Framework  
-- **TypeScript** – Strong typing  
-- **Prisma ORM** – Database modeling & migrations  
-- **PostgreSQL** – Primary relational database  
-- **JWT Authentication** – Secure user login  
-- **Payment Gateways** – SSLCommerz, bKash, Nagad  
-- **Winston / Pino** – Logging  
-- **Jest + Supertest** – Unit & Integration Testing  
+This schema powers a modern e-commerce platform with **AI-driven product recommendations**, advanced catalog management, order tracking, coupons, banners, blogging, and notifications.  
 
 ---
 
-## ⚙️ Installation & Setup
+## 🚀 Features  
+- **User Management** → Roles (Admin, Customer, Staff), addresses, auth-ready.  
+- **Product Catalog** → Products, translations, media, categories, stock tracking.  
+- **Orders & Payments** → Multi-status order lifecycle, payments, discounts, coupons.  
+- **AI Recommendation Engine** → Context-aware symptom-to-product recommendations.  
+- **Content System** → Blogs with localization, SEO metadata.  
+- **Marketing** → Coupons, offer banners, personalized notifications.  
+- **Optimized Performance** → Indexes for query speed, soft deletes, relations for cascading updates.  
 
-### 1️⃣ Clone the repository
-```bash
-git clone https://github.com/your-org/autism-aid-bd-backend.git
-cd autism-aid-bd-backend
-npm install
-```
+---
 
-### 3️⃣ Setup Environment Variables
-```bash
-DATABASE_URL="postgresql://user:password@localhost:5432/autism_aid_bd"
-PORT=5000
-JWT_SECRET="supersecret"
+## 📂 Models Overview  
 
-# Payment Gateway Keys
-SSLCOMMERZ_STORE_ID=xxxx
-SSLCOMMERZ_STORE_PASS=xxxx
-BKASH_APP_KEY=xxxx
-BKASH_APP_SECRET=xxxx
-BKASH_USERNAME=xxxx
-BKASH_PASSWORD=xxxx
-NAGAD_MERCHANT_ID=xxxx
-NAGAD_MERCHANT_NUMBER=xxxx
-```
+### 👤 User & Address  
+- **User** → Core entity (Admin / Customer / Staff).  
+- **Address** → Multiple addresses per user, supports default flag.  
 
-### 4️⃣ Prisma Setup
-```bash
-npx prisma migrate dev --name init
-npx prisma generate
-npx ts-node prisma/seed.ts
-npm run dev
-```
+### 📦 Product Catalog  
+- **Product** → Base entity with price, stock, embedding (for semantic search).  
+- **ProductTranslation** → Multi-language content (name, slug, SEO, description).  
+- **ProductMedia** → Images, videos, alt-text.  
+- **Category** + **CategoryTranslation** → Hierarchical categories with localization.  
+- **ProductOnCategory** → Many-to-many join table.  
 
-### 🔑 Available API Endpoints
+### 🛒 Cart & Orders  
+- **Cart** + **CartItem** → One cart per user, supports multiple items.  
+- **Order** + **OrderItem** → Tracks checkout, product quantities, and pricing breakdown.  
+- **Payment** → Supports multiple payment methods and statuses.  
 
-#### Auth / User
-- `POST /api/v1/auth/register` → Register user
-- `POST /api/v1/auth/login` → Login with JWT
-- `GET /api/v1/users/me` → Get profile
+### ⭐ Reviews & Stock  
+- **Review** → Verified customer reviews, unique per user/product.  
+- **StockLog** → History of stock updates with type and note.  
 
-#### Products
-- `GET /api/v1/products` → List products (filter by condition/category/price)
-- `GET /api/v1/products/:id` → Product detail
-- `POST /api/v1/products` → (Admin) Create product
+### 🎟 Coupons & Promotions  
+- **Coupon** → Percentage or fixed, with validity periods and per-user limits.  
+- **CouponProduct** + **CouponCategory** → Restrict coupons to specific products/categories.  
+- **OfferBanner** → Targeted promotional banners (page + device type).  
 
-#### Orders
-- `POST /api/v1/orders` → Place order
-- `GET /api/v1/orders/:id` → Order details & tracking
+### 🤖 AI Recommendation Engine  
+- **AIRecommendation** → Stores user symptom/context queries.  
+- **AIRecommendationProduct** → Links products with a relevance score and matched fields.  
+- Designed for **AI-driven personalization** and **semantic product search**.  
 
-#### Payments
-- `POST /api/v1/payments/init` → Init payment
-- `POST /api/v1/payments/webhook/sslcommerz` → SSLCommerz callback
-- `POST /api/v1/payments/webhook/bkash` → bKash callback
-- `POST /api/v1/payments/webhook/nagad` → Nagad callback
+### ✍️ Content & Notifications  
+- **BlogPost** + **BlogPostTranslation** → Multi-lingual blog system with SEO.  
+- **Notification** → User-targeted or global, supports order updates, promotions, system alerts.  
 
-#### Blog
-- `GET /api/v1/blogs` → List blogs
-- `GET /api/v1/blogs/:id` → Blog detail
-- `POST /api/v1/blogs` → (Admin) Create blog
+---
 
-#### Offers
-- `GET /api/v1/offers` → Active offers
-- Dynamic Location-based Offer Banner
+## 🧠 AI Recommendation Workflow  
 
+1. **User Query**  
+   - User enters symptom (e.g., `"autism symptoms"`) → stored in `AIRecommendation`.  
+   - Context stored in JSON (age, gender, conditions, preferences).  
 
-### 🛠️ Scripts
-```bash
-npm run dev       # Run in development mode
-npm run build     # Build TypeScript → JavaScript
-npm run start     # Run production build
-npm run lint      # ESLint check
-npm run test      # Run unit & integration tests
-```
+2. **Product Matching**  
+   - Products matched using embeddings, rules, or AI models.  
+   - Matches stored in `AIRecommendationProduct` with `relevanceScore` and `matchedFields`.  
 
-### 🔒 Security & Best Practices
-- ✅ **Helmet.js** – Secure HTTP headers
-- ✅ **CORS** – Enable frontend integration
-- ✅ **JWT Authentication** – Secure user sessions
-- ✅ **Centralized Error Handling**
-- ✅ **Prisma Query Optimization + Indexing**
-- ✅ **Logging** – Error tracking via Winston/Pino
+3. **Result Delivery**  
+   - API fetches top-ranked recommendations with full product data.  
 
+---
 
-### 📌 Roadmap
-- Inventory Management (Low Stock Alerts)
-- Therapist Q&A System
-- Dynamic Location-based Offers
-- Multi-language Full Content
+## ⚡ Indexing & Optimization  
 
+- **Products**  
+  - Indexed by `status`, `price`, `trending/new`, `ratings`, `stock`.  
+  - Embeddings stored in `Json?` field → optimized for vector similarity search (via pgvector or external service).  
 
+- **Orders**  
+  - Indexed by `userId`, `status`, `isPaid`, `createdAt`.  
 
+- **AI Recommendation**  
+  - Indexed by `symptom` and `relevanceScore`.  
 
+- **Blog & Category**  
+  - Indexed by `slug`, `locale`, and `title`.  
+
+- **Offer Banners**  
+  - Indexed by `status`, `priority`, `targetPage`, `deviceType`.  
+
+---
+
+## 🔒 Cascade Rules  
+
+- **Products**  
+  - Cascade delete for translations, media, categories, recommendations.  
+- **Orders**  
+  - Cascade delete for items & payments.  
+- **User**  
+  - Cascade delete for addresses, carts, orders, reviews, notifications.  
+
+---
+
+## 🔑 Enums  
+
+- **Role** → `ADMIN | CUSTOMER | STAFF`  
+- **ProductStatus** → `ACTIVE | INACTIVE | DRAFT`  
+- **OrderStatus** → Full lifecycle: `PENDING → CONFIRMED → SHIPPED → DELIVERED → RETURNED`  
+- **PaymentStatus** → Covers `PENDING, PAID, REFUNDED_PENDING, REFUNDED`  
+- **CouponType** → `PERCENTAGE | FIXED`  
+- **BlogStatus** → `DRAFT | PUBLISHED | ARCHIVED`  
+- **NotificationType** → System + User events  
+
+---
+
+## 🛠 Developer Notes  
+
+- All models mapped to snake_case tables via `@@map()`.  
+- Use `onDelete: Cascade` for data integrity.  
+- AI models can extend:  
+  - `AIRecommendation.source` → `"chatbot" | "manual" | "doctor"`.  
+  - `AIRecommendationProduct.matchedFields` → structured JSON (`{ matched: ["benefits", "tags"] }`).  
+- Future expansion →  
+  - Add `Wishlist` model.  
+  - Integrate `pgvector` for faster embedding search.  
+  - Event-driven notifications (Kafka, RabbitMQ, etc.).  
+
+---
+
+## 📊 Example Query (Prisma Client)  
+
+```ts
+// Create AI Recommendation with linked products
+const rec = await prisma.aIRecommendation.create({
+  data: {
+    userId: user.id,
+    symptom: "autism symptoms",
+    context: { age: 7, gender: "male" },
+    source: "chatbot",
+    products: {
+      create: [
+        {
+          product: { connect: { id: "prod123" } },
+          relevanceScore: 0.92,
+          matchedFields: { matched: ["benefits", "tags"] },
+        },
+      ],
+    },
+  },
+  include: { products: { include: { product: true } } },
+});

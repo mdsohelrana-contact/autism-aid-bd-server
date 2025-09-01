@@ -75,7 +75,7 @@ const getAllOfferBanners = async (query: QueryParams) => {
 };
 
 const getAllActiveOfferBanners = async (query: QueryParams) => {
-  console.log("🚀 ~ query:", query)
+  
   const builder = new PrismaQueryBuilder(query)
     .search(["title", "subtitle", "seoTitle", "seoDesc"])
     .filter()
