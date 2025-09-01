@@ -23,7 +23,7 @@ const createCoupon = catchAsync(async (req, res) => {
 // Get all coupons
 const getCoupons = catchAsync(async (req, res) => {
   const userId = req!.user!.id;
-    const query = parseQueryParams(req);
+  const query = parseQueryParams(req);
 
   const coupons = await CouponService.getCoupons(userId, query);
 

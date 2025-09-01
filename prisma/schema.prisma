@@ -34,10 +34,25 @@ enum OrderStatus {
   RETURNED
 }
 
-enum BlogStatus {
+enum BannerStatus {
+  ACTIVE
+  INACTIVE
   DRAFT
-  PUBLISHED
-  ARCHIVED
+}
+
+enum DeviceType {
+  WEB
+  MOBILE
+  BOTH
+}
+
+enum BannerPage {
+  HOME
+  PRODUCT
+  CATEGORY
+  CART
+  CHECKOUT
+  CUSTOM
 }
 
 enum CouponStatus {
@@ -58,6 +73,12 @@ enum PaymentStatus {
   REFUNDED
   CANCELLED
   REFUNDED_PENDING
+}
+
+enum BlogStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
 }
 
 // NotificationType
@@ -93,11 +114,12 @@ model User {
   carts              Cart[]
   orders             Order[]
   reviews            Review[]
-  Notification       Notification[]
-  Product            Product[]
-  ProductTranslation ProductTranslation[]
-  ProductMedia       ProductMedia[]
-  Coupon             Coupon[]
+  notification       Notification[]
+  product            Product[]
+  productTranslation ProductTranslation[]
+  productMedia       ProductMedia[]
+  coupon             Coupon[]
+  offerBanner        OfferBanner[]
 
   @@map("users")
 }
@@ -461,20 +483,42 @@ model CouponCategory {
 // OFFER BANNER
 model OfferBanner {
   id       String  @id @default(cuid())
-  slug     String  @unique
-  title    String
-  subtitle String?
-  imageUrl String?
-  linkUrl  String?
-  seoTitle String?
-  seoDesc  String?
+  slug     String  @unique @db.VarChar(150)
+  title    String  @db.VarChar(255)
+  subtitle String? @db.VarChar(255)
+  imageUrl String? @db.Text
+  linkUrl  String? @db.Text
+
+  seoTitle String? @db.VarChar(255)
+  seoDesc  String? @db.VarChar(500)
+
+  status   BannerStatus @default(ACTIVE)
+  priority Int          @default(0) // ordering for multiple banners
+
+  startDate DateTime? // scheduled start
+  endDate   DateTime? // scheduled end
+
+  userId String
+  // Relation with user
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  targetPage BannerPage? // HOME, PRODUCT, CATEGORY, CART, etc.
+  deviceType DeviceType? // WEB, MOBILE, BOTH
+
+  // Performance helpers
+  isDeleted   Boolean @default(false) // soft delete
+  impressions Int     @default(0) // how many times viewed
+  clicks      Int     @default(0) // how many times clicked
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  // Indexing for speed 🚀
+  @@index([status, startDate, endDate])
+  @@index([priority])
+  @@index([targetPage, deviceType])
   @@map("offer_banners")
 }
-
 
 //  BLOG 
 model BlogPost {
@@ -509,7 +553,6 @@ model BlogPostTranslation {
   @@index([title])
   @@map("blog_post_translations")
 }
-
 
 model Notification {
   id        String           @id @default(cuid())
